@@ -1,0 +1,2119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>工厂隐患数据分析台</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23F59E0B' d='M12 2 1 21h22L12 2zm1 15h-2v2h2v-2zm0-6h-2v4h2v-4z'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://miaoda.feishu.cn">
+<link href="https://miaoda.feishu.cn/fonts/css2?family=Noto+Sans+SC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0B1220; --bg2:#0D1526; --panel:#111C31; --panel2:#16233C; --line:#22304B;
+  --txt:#E8EEF7; --muted:#8CA0BF; --faint:#5B6B8C;
+  --accent:#F59E0B; --accent-deep:#D97706; --ok:#2DD4BF; --danger:#EF4444;
+  --l1:#EF4444; --l2:#F59E0B; --l3:#2DD4BF;
+  --radius:12px; --shadow:0 10px 30px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box; margin:0; padding:0;}
+html{color-scheme:dark;}
+body{
+  background:
+    radial-gradient(1200px 500px at 80% -10%, rgba(245,158,11,.08), transparent 60%),
+    radial-gradient(900px 420px at -10% 0%, rgba(45,212,191,.06), transparent 55%),
+    var(--bg);
+  color:var(--txt);
+  font-family:"Noto Sans SC","Microsoft YaHei",system-ui,-apple-system,"Segoe UI",sans-serif;
+  font-size:14px; line-height:1.6; min-height:100vh;
+}
+.app{max-width:1720px; margin:0 auto; padding:18px 20px 40px;}
+::-webkit-scrollbar{width:9px;height:9px;}
+::-webkit-scrollbar-thumb{background:#26355A;border-radius:6px;}
+::-webkit-scrollbar-track{background:transparent;}
+button{font-family:inherit;}
+input,select{font-family:inherit;}
+
+/* ---------- header ---------- */
+header{display:flex; align-items:flex-start; justify-content:space-between; gap:18px; flex-wrap:wrap; margin-bottom:14px;}
+.brand{display:flex; align-items:center; gap:12px;}
+.brand .mark{
+  width:42px;height:42px;border-radius:11px;flex:none;
+  background:linear-gradient(145deg,#FBBF24,#D97706);
+  display:flex;align-items:center;justify-content:center;color:#1A1206;
+  box-shadow:0 6px 18px rgba(245,158,11,.35);
+}
+.brand h1{font-size:21px;font-weight:900;letter-spacing:.5px;line-height:1.25;}
+.brand p{font-size:12px;color:var(--muted);}
+.stepper{display:flex;align-items:center;gap:0;background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:7px 10px;box-shadow:var(--shadow);}
+.step{display:flex;align-items:center;gap:7px;padding:3px 10px;color:var(--faint);font-size:12.5px;font-weight:500;white-space:nowrap;}
+.step .dot{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--line);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;background:var(--bg2);}
+.step.done{color:var(--muted);}
+.step.done .dot{border-color:var(--ok);color:var(--ok);background:rgba(45,212,191,.12);}
+.step.active{color:var(--txt);}
+.step.active .dot{border-color:var(--accent);color:#1A1206;background:var(--accent);}
+.step-arrow{color:var(--faint);font-size:12px;}
+
+/* ---------- toolbar ---------- */
+.toolbar{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:11px 14px;box-shadow:var(--shadow);margin-bottom:14px;}
+.tgroup{display:flex;flex-wrap:wrap;gap:8px;align-items:center;}
+.tdivider{width:1px;align-self:stretch;background:var(--line);margin:2px 4px;}
+.btn{
+  display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);background:var(--panel2);
+  color:var(--txt);padding:7px 13px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;
+  transition:border-color .15s,background .15s,transform .05s;white-space:nowrap;
+}
+.btn:hover{border-color:var(--muted);background:#1B2A47;}
+.btn:active{transform:translateY(1px);}
+.btn.primary{background:linear-gradient(145deg,#FBBF24,#D97706);border-color:transparent;color:#1A1206;font-weight:700;}
+.btn.primary:hover{filter:brightness(1.06);}
+.btn.toggle-on{background:rgba(45,212,191,.14);border-color:var(--ok);color:var(--ok);}
+.btn.toggle-danger-on{background:rgba(239,68,68,.15);border-color:var(--danger);color:#FCA5A5;}
+.btn svg{flex:none;}
+.lbl{font-size:12px;color:var(--muted);display:inline-flex;align-items:center;gap:6px;white-space:nowrap;}
+input[type=date],select,input[type=number]{
+  background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;
+  padding:6px 9px;font-size:12.5px;outline:none;transition:border-color .15s;
+}
+input[type=date]:focus,select:focus,input[type=number]:focus{border-color:var(--accent);}
+input[type=date]{color-scheme:dark;}
+.hint-save{margin-left:auto;font-size:11.5px;color:var(--faint);}
+.net-notice{margin:-4px 0 14px;padding:9px 14px;border-radius:10px;background:rgba(245,158,11,.09);border:1px solid rgba(245,158,11,.4);color:#FCD34D;font-size:12.5px;display:flex;gap:8px;align-items:center;line-height:1.7;}
+.net-notice svg{flex:none;}
+
+/* ---------- KPI ---------- */
+.kpis{display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:14px;}
+.kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);padding:12px 15px;box-shadow:var(--shadow);position:relative;overflow:hidden;}
+.kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:var(--kc,var(--accent));opacity:.9;}
+.kpi .t{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:6px;}
+.kpi .v{font-size:26px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1.3;margin-top:2px;}
+.kpi .s{font-size:11.5px;color:var(--faint);margin-top:1px;}
+.kpi .v.red{color:var(--danger);}
+
+/* ---------- main grid ---------- */
+.main{display:grid;grid-template-columns:minmax(0,1fr) 400px;gap:14px;align-items:start;}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);}
+.panel-hd{display:flex;align-items:center;gap:10px;padding:12px 15px;border-bottom:1px solid var(--line);flex-wrap:wrap;}
+.panel-hd h2{font-size:15px;font-weight:700;display:flex;align-items:center;gap:8px;}
+.panel-hd .sub{font-size:12px;color:var(--faint);}
+.panel-hd .spacer{flex:1;}
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:11.5px;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:2px 9px;}
+.chip i{width:8px;height:8px;border-radius:50%;display:inline-block;}
+
+/* ---------- layout canvas ---------- */
+.canvas-panel .panel-hd{position:relative;z-index:2;}
+#layoutStage{position:relative;width:100%;margin:0 auto;padding:14px 14px 18px;}
+#layoutStage img{display:block;width:100%;height:auto;border-radius:8px;border:1px solid var(--line);background:#0A101D;}
+#roomSvg{position:absolute;inset:14px 14px 18px;width:calc(100% - 28px);height:auto;}
+.stage-empty{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+  min-height:380px;border:1.5px dashed var(--line);border-radius:10px;color:var(--faint);text-align:center;padding:30px;
+}
+.stage-empty .big{width:54px;height:54px;opacity:.55;}
+.stage-empty strong{color:var(--muted);font-size:15px;}
+.stage-hint{display:flex;align-items:center;justify-content:center;gap:8px;font-size:12px;color:var(--faint);padding:8px 12px 4px;flex-wrap:wrap;}
+.room rect.roombody{stroke:var(--ok);stroke-width:2;fill:rgba(45,212,191,.10);cursor:move;transition:fill .2s;}
+.room rect.roombody:hover{fill:rgba(45,212,191,.20);}
+.room.selected rect.roombody{stroke:#FFFFFF;stroke-width:2.5;fill:rgba(45,212,191,.16);}
+.room.dup rect.roombody{stroke:var(--danger);stroke-width:2.5;fill:rgba(239,68,68,.16);filter:drop-shadow(0 0 7px rgba(239,68,68,.85));animation:dupPulse 2s ease-in-out infinite;}
+.room.dup.selected rect.roombody{stroke:#FFFFFF;}
+@keyframes dupPulse{0%,100%{filter:drop-shadow(0 0 5px rgba(239,68,68,.65));}50%{filter:drop-shadow(0 0 13px rgba(239,68,68,1));}}
+.room text.rname{fill:var(--txt);font-weight:700;paint-order:stroke;stroke:rgba(11,18,32,.9);stroke-width:3px;pointer-events:none;user-select:none;}
+.room .rbadge circle{fill:var(--danger);stroke:var(--bg);stroke-width:2;}
+.room .rbadge text{fill:#fff;font-weight:900;pointer-events:none;}
+.handle{fill:var(--panel2);stroke:#fff;stroke-width:1.6;cursor:move;}
+.resize-handle{fill:var(--accent);stroke:#1A1206;stroke-width:1.6;cursor:nwse-resize;}
+#drawPreview{fill:rgba(245,158,11,.22);stroke:var(--accent);stroke-width:2;stroke-dasharray:6 4;pointer-events:none;}
+.name-editor{position:absolute;z-index:30;width:178px;background:var(--bg2);border:1.5px solid var(--accent);color:var(--txt);border-radius:8px;padding:6px 10px;font-size:13px;font-weight:600;outline:none;box-shadow:0 8px 24px rgba(0,0,0,.45);}
+.legend{display:flex;gap:8px;align-items:center;}
+
+/* ---------- side panel ---------- */
+.side-panel{display:flex;flex-direction:column;max-height:calc(100vh - 250px);position:sticky;top:14px;}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 10px;}
+.tab{padding:11px 14px;font-size:13.5px;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;font-weight:500;display:flex;align-items:center;gap:6px;}
+.tab:hover{color:var(--txt);}
+.tab.active{color:var(--txt);border-bottom-color:var(--accent);}
+.tab .cnt{background:var(--bg2);border:1px solid var(--line);border-radius:999px;font-size:10.5px;padding:0 7px;font-weight:700;}
+.tab .cnt.red{background:rgba(239,68,68,.18);border-color:var(--danger);color:#FCA5A5;}
+.tabbody{flex:1;overflow-y:auto;padding:14px 15px;}
+.tabbody h3{font-size:13px;font-weight:700;margin:4px 0 8px;color:var(--muted);display:flex;align-items:center;gap:8px;}
+.tabbody h3::before{content:"";width:3px;height:13px;background:var(--accent);border-radius:2px;}
+.chart{width:100%;height:210px;}
+.chart.tall{height:240px;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.room-head{display:flex;align-items:center;gap:10px;margin-bottom:12px;flex-wrap:wrap;}
+.room-head .nm{font-size:17px;font-weight:900;}
+.room-head .dup-tag{background:rgba(239,68,68,.16);color:#FCA5A5;border:1px solid var(--danger);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;}
+.room-head .ok-tag{background:rgba(45,212,191,.12);color:var(--ok);border:1px solid rgba(45,212,191,.5);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;}
+.chips .k{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:5px 10px;font-size:12px;}
+.chips .k b{font-size:15px;margin-right:3px;font-variant-numeric:tabular-nums;}
+.chips .k.l1 b{color:var(--l1);} .chips .k.l2 b{color:var(--l2);} .chips .k.l3 b{color:var(--l3);}
+.empty-box{border:1px dashed var(--line);border-radius:9px;padding:22px 14px;text-align:center;color:var(--faint);font-size:12.5px;margin:8px 0;}
+.empty-box .btn{margin-top:10px;}
+
+/* dup list */
+.dup-card{background:var(--bg2);border:1px solid rgba(239,68,68,.4);border-radius:9px;padding:10px 12px;margin-bottom:9px;cursor:pointer;transition:border-color .15s,background .15s;}
+.dup-card:hover{border-color:var(--danger);background:#182438;}
+.dup-card .top{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.dup-card .room-tag{background:rgba(239,68,68,.18);color:#FCA5A5;font-weight:700;font-size:12px;border-radius:6px;padding:1px 8px;border:1px solid rgba(239,68,68,.5);}
+.dup-card .dept{font-size:12px;color:var(--muted);}
+.dup-card .desc{font-size:13px;margin:6px 0;line-height:1.5;}
+.dup-card .dates{display:flex;flex-wrap:wrap;gap:5px;}
+.dup-card .dates span{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:1px 7px;font-size:11.5px;font-variant-numeric:tabular-nums;color:var(--muted);}
+.dup-card .meta{display:flex;gap:10px;margin-top:7px;font-size:11.5px;color:var(--faint);}
+
+/* room list */
+.room-list-item{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);border-radius:9px;margin-bottom:6px;background:var(--bg2);cursor:pointer;}
+.room-list-item:hover{border-color:var(--muted);}
+.room-list-item.selected{border-color:var(--accent);}
+.room-list-item .sq{width:12px;height:12px;border-radius:3px;flex:none;}
+.room-list-item .nm{flex:1;font-size:13px;font-weight:500;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.room-list-item .n{font-size:11.5px;color:var(--faint);font-variant-numeric:tabular-nums;}
+.room-list-item .act{display:flex;gap:4px;}
+.icon-btn{background:transparent;border:1px solid transparent;color:var(--faint);width:24px;height:24px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.icon-btn:hover{color:var(--txt);background:var(--panel2);border-color:var(--line);}
+
+/* ---------- table ---------- */
+.table-panel{margin-top:14px;}
+.table-tools{display:flex;align-items:center;gap:10px;padding:10px 15px;flex-wrap:wrap;}
+.table-wrap{overflow:auto;max-height:430px;border-top:1px solid var(--line);}
+table{width:100%;border-collapse:collapse;font-size:12.8px;table-layout:fixed;}
+thead th{position:sticky;top:0;background:var(--panel2);color:var(--muted);font-weight:500;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap;z-index:1;}
+tbody td{padding:8px 10px;border-bottom:1px solid rgba(34,48,75,.6);vertical-align:top;overflow:hidden;text-overflow:ellipsis;}
+tbody tr:hover{background:rgba(45,212,191,.05);}
+tbody tr{cursor:pointer;}
+.badge{display:inline-block;padding:1px 8px;border-radius:6px;font-size:11.5px;font-weight:700;white-space:nowrap;}
+.badge.l1{background:rgba(239,68,68,.16);color:#FCA5A5;border:1px solid rgba(239,68,68,.45);}
+.badge.l2{background:rgba(245,158,11,.15);color:#FCD34D;border:1px solid rgba(245,158,11,.45);}
+.badge.l3{background:rgba(45,212,191,.13);color:var(--ok);border:1px solid rgba(45,212,191,.4);}
+.badge.dup{background:rgba(239,68,68,.2);color:#FCA5A5;border:1px solid var(--danger);}
+.badge.room{background:var(--panel2);color:var(--muted);border:1px solid var(--line);}
+.badge.unmatched{background:rgba(148,163,184,.14);color:#CBD5E1;border:1px dashed var(--faint);}
+.desc-cell{white-space:normal!important;overflow:visible!important;}
+.rstat{fill:var(--txt);font-weight:700;paint-order:stroke;stroke:rgba(11,18,32,.92);stroke-width:3px;pointer-events:none;user-select:none;}
+.hazard-item{background:var(--bg2);border:1px solid var(--line);border-radius:9px;padding:9px 11px;margin-bottom:8px;}
+.h-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;font-size:12px;color:var(--muted);}
+.h-top .h-date{margin-left:auto;font-variant-numeric:tabular-nums;}
+.h-top .h-person{color:#7DD3FC;}
+.h-top .h-dept{color:#FCD34D;}
+.h-top .h-rectp{color:#6EE7B7;font-size:11.5px;}
+.h-desc{font-size:13px;margin:6px 0 4px;line-height:1.55;}
+.h-meta{font-size:11.5px;color:var(--faint);}
+.h-photos{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px;align-items:center;}
+.h-photos img{width:64px;height:64px;object-fit:cover;border-radius:7px;border:1px solid var(--line);cursor:zoom-in;}
+.h-photos img:hover{border-color:var(--accent);}
+.ph-up{width:64px;height:64px;border:1px dashed var(--faint);border-radius:7px;display:inline-flex;flex-direction:column;align-items:center;justify-content:center;color:var(--faint);font-size:10px;cursor:pointer;gap:2px;background:transparent;font-family:inherit;}
+.ph-up:hover{color:var(--txt);border-color:var(--muted);}
+.tph{width:40px;height:30px;object-fit:cover;border-radius:5px;border:1px solid var(--line);cursor:zoom-in;display:block;}
+.tph:hover{border-color:var(--accent);}
+.lightbox{position:fixed;inset:0;background:rgba(4,9,18,.87);z-index:300;display:flex;align-items:center;justify-content:center;padding:26px;}
+.lb-box{position:relative;max-width:min(92vw,1200px);}
+.lb-box img{max-width:92vw;max-height:82vh;border-radius:10px;border:1px solid var(--line);box-shadow:0 30px 80px rgba(0,0,0,.6);}
+.lb-cap{text-align:center;color:var(--muted);font-size:12.5px;margin-top:10px;}
+.lb-close{position:absolute;top:-14px;right:-14px;width:34px;height:34px;border-radius:50%;background:var(--panel2);border:1px solid var(--line);color:var(--txt);cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.lb-close:hover{border-color:var(--danger);color:#FCA5A5;}
+.room-modal{position:fixed;inset:0;background:rgba(4,9,18,.8);z-index:250;display:flex;align-items:center;justify-content:center;padding:18px;}
+.rm-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(1180px,96vw);max-height:92vh;display:flex;flex-direction:column;box-shadow:0 30px 90px rgba(0,0,0,.6);}
+.rm-hd{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:12px;flex-wrap:wrap;flex:none;}
+.rm-hd h3{font-size:17px;font-weight:900;display:flex;align-items:center;gap:10px;}
+.rm-hd .sub{font-size:12px;color:var(--faint);}
+.rm-hd .spacer{flex:1;}
+.rm-close{width:32px;height:32px;border-radius:8px;background:var(--bg2);border:1px solid var(--line);color:var(--muted);cursor:pointer;display:flex;align-items:center;justify-content:center;flex:none;}
+.rm-close:hover{color:#FCA5A5;border-color:var(--danger);}
+.rm-bd{flex:1;overflow-y:auto;padding:16px 20px;}
+.rm-del{color:#FCA5A5;}
+.rm-del:hover{background:rgba(239,68,68,.14);border-color:var(--danger);color:#FCA5A5;}
+.rm-hd .dup-tag{background:rgba(239,68,68,.16);color:#FCA5A5;border:1px solid var(--danger);border-radius:999px;padding:2px 10px;font-size:12px;font-weight:700;}
+.badge.c-ok{background:rgba(45,212,191,.14);color:var(--ok);border-color:rgba(45,212,191,.5);}
+.badge.c-do{background:rgba(245,158,11,.14);color:#FBBF24;border-color:rgba(245,158,11,.5);}
+.badge.c-nd{background:rgba(239,68,68,.14);color:#FCA5A5;border-color:rgba(239,68,68,.5);}
+.btn.sm{padding:4px 10px;font-size:12px;border-radius:7px;}
+.h-rect{margin-top:9px;border-top:1px dashed rgba(34,48,75,.7);padding-top:8px;}
+.h-rect-line{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+.rect-note{font-size:12px;color:var(--muted);}
+.rect-editor{display:none;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px;}
+.rect-editor select,.rect-editor input{background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:7px;padding:5px 8px;font-size:12.5px;outline:none;}
+.rect-editor input{flex:1;min-width:150px;}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;}
+.form-item{display:flex;flex-direction:column;gap:4px;}
+.form-item label{font-size:12.5px;color:var(--muted);}
+.form-item input,.form-item select,.form-item textarea{background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:7px 10px;font-size:13px;outline:none;font-family:inherit;}
+.form-item input:focus,.form-item select:focus,.form-item textarea:focus{border-color:var(--accent);}
+.form-item.full{grid-column:1/-1;}
+.ah-thumbs{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;}
+.ah-thumbs img{width:52px;height:52px;object-fit:cover;border-radius:6px;border:1px solid var(--line);}
+.modal-hd{display:flex;align-items:center;gap:10px;padding:14px 20px;border-bottom:1px solid var(--line);}
+.modal-hd h3{font-size:16px;font-weight:900;}
+.modal-bd{padding:16px 20px;overflow-y:auto;}
+.modal-ft{display:flex;align-items:center;gap:10px;padding:13px 20px;border-top:1px solid var(--line);justify-content:flex-end;}
+.modal-ft .spacer{flex:1;}
+
+/* ---------- modal / toast ---------- */
+.modal-mask{position:fixed;inset:0;background:rgba(4,9,18,.72);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:14px;width:min(680px,100%);max-height:88vh;display:flex;flex-direction:column;box-shadow:0 24px 60px rgba(0,0,0,.5);}
+.modal-hd{padding:16px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px;}
+.modal-hd h3{font-size:16px;font-weight:700;}
+.modal-bd{padding:16px 20px;overflow-y:auto;}
+.modal-ft{padding:14px 20px;border-top:1px solid var(--line);display:flex;justify-content:flex-end;gap:10px;}
+.map-row{display:grid;grid-template-columns:150px 1fr;gap:10px;align-items:center;padding:7px 0;border-bottom:1px dashed rgba(34,48,75,.7);}
+.map-row .k{font-size:13px;color:var(--muted);font-weight:500;}
+.map-row .k b{color:var(--txt);}
+.map-row select{width:100%;}
+.note{font-size:12px;color:var(--faint);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin-top:10px;line-height:1.7;}
+#toastRoot{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+.toast{background:#1B2A47;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 16px;font-size:13px;box-shadow:var(--shadow);animation:toastIn .22s ease;max-width:640px;}
+.toast.err{border-color:var(--danger);color:#FCA5A5;}
+.toast.ok{border-color:var(--ok);color:#99F6E4;}
+@keyframes toastIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+footer{margin-top:18px;color:var(--faint);font-size:12px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;}
+
+@media (max-width:1260px){
+  .main{grid-template-columns:1fr;}
+  .side-panel{max-height:none;position:static;}
+  .kpis{grid-template-columns:repeat(3,1fr);}
+}
+@media (max-width:760px){
+  .app{padding:12px 10px 30px;}
+  .kpis{grid-template-columns:repeat(2,1fr);}
+  .stepper{display:none;}
+  .grid2{grid-template-columns:1fr;}
+  .map-row{grid-template-columns:110px 1fr;}
+}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header>
+    <div class="brand">
+      <div class="mark">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+      </div>
+      <div>
+        <h1>工厂隐患数据分析台</h1>
+        <p>布局图房间划分 · Excel 隐患台账 · 房间画像与一月内重复隐患标红</p>
+      </div>
+    </div>
+    <ol class="stepper" id="stepper">
+      <li class="step active" data-step="1"><span class="dot">1</span>导入布局图</li>
+      <li class="step-arrow">›</li>
+      <li class="step" data-step="2"><span class="dot">2</span>划分房间</li>
+      <li class="step-arrow">›</li>
+      <li class="step" data-step="3"><span class="dot">3</span>导入隐患数据</li>
+      <li class="step-arrow">›</li>
+      <li class="step" data-step="4"><span class="dot">4</span>分析查看</li>
+    </ol>
+  </header>
+
+  <div class="toolbar" id="toolbar">
+    <div class="tgroup">
+      <button class="btn" id="btnLayout"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>导入布局图</button>
+      <button class="btn" id="btnDraw"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19h7"/><path d="M16.5 4.5 19 7l-8.5 8.5-4 1 1-4L16.5 4.5Z"/></svg>划分房间</button>
+      <button class="btn primary" id="btnImport"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>导入隐患数据</button>
+      <button class="btn" id="btnAdd" title="直接在页面录入一条隐患"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>新增隐患</button>
+      <button class="btn" id="btnPhotos" title="Excel「隐患照片/整改照片」列填文件名，导入前先在这里上传对应图片"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6 10 3.5h4L15.5 6"/></svg>上传照片附件</button>
+      <button class="btn" id="btnNotify" title="配置 Server酱（方糖）微信推送：每月1号自动提醒重复隐患"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>提醒设置</button>
+      <button class="btn" id="btnSample"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>加载示例</button>
+      <button class="btn" id="btnTemplate"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 17h8"/><path d="M8 13h5"/></svg>下载模板</button>
+      <button class="btn" id="btnExport" title="按当前筛选/搜索范围导出隐患数据为 Excel 或 CSV"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>导出数据</button>
+      <button class="btn" id="btnClear" style="color:#FCA5A5;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>清空（分项）</button>
+    </div>
+    <div class="tdivider"></div>
+    <div class="tgroup">
+      <label class="lbl">统计范围
+        <input type="date" id="fFrom">
+        <span style="color:var(--faint)">至</span>
+        <input type="date" id="fTo">
+      </label>
+      <label class="lbl">等级
+        <select id="fLevel"><option value="all">全部</option><option>一类隐患</option><option>二类隐患</option><option>三类隐患</option></select>
+      </label>
+      <label class="lbl">类别
+        <select id="fCat"><option value="all">全部</option><option>电气安全</option><option>设备安全</option><option>化学品安全</option><option>消防安全</option><option>劳保用品安全</option><option>文件管理</option><option>其他安全</option></select>
+      </label>
+      <label class="lbl">部门
+        <select id="fDept"><option value="all">全部</option></select>
+      </label>
+      <label class="lbl">重复窗口
+        <input type="number" id="fWindow" value="30" min="1" max="365" style="width:64px">天
+      </label>
+      <button class="btn toggle-danger-on" id="btnHighlight"><svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>重复标红</button>
+      <button class="btn" id="btnReset">重置筛选</button>
+    </div>
+    <span class="hint-save" id="saveHint">数据自动保存在本机浏览器</span>
+  </div>
+
+  <div class="net-notice" id="netNotice" style="display:none"></div>
+
+  <div class="kpis" id="kpis">
+    <div class="kpi" style="--kc:var(--accent)"><div class="t">隐患总数</div><div class="v" id="kTotal">0</div><div class="s" id="kTotalSub">未导入数据</div></div>
+    <div class="kpi" style="--kc:var(--l1)"><div class="t">一类隐患</div><div class="v red" id="kL1">0</div><div class="s">高风险</div></div>
+    <div class="kpi" style="--kc:var(--l2)"><div class="t">二类隐患</div><div class="v" id="kL2">0</div><div class="s">中风险</div></div>
+    <div class="kpi" style="--kc:var(--l3)"><div class="t">三类隐患</div><div class="v" id="kL3">0</div><div class="s">低风险</div></div>
+    <div class="kpi" style="--kc:var(--danger)"><div class="t">重复隐患组</div><div class="v red" id="kDup">0</div><div class="s" id="kDupSub">窗口期内同房同部同描述</div></div>
+    <div class="kpi" style="--kc:var(--ok)"><div class="t">涉及房间</div><div class="v" id="kRooms">0</div><div class="s" id="kRoomsSub">已划分房间</div></div>
+  </div>
+
+  <main class="main">
+    <section class="panel canvas-panel">
+      <div class="panel-hd">
+        <h2><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>工厂布局图</h2>
+        <span class="sub" id="layoutSub">未导入布局图</span>
+        <span class="spacer"></span>
+        <div class="legend">
+          <span class="chip"><i style="background:var(--ok)"></i>正常房间</span>
+          <span class="chip"><i style="background:var(--danger)"></i>一月内重复隐患</span>
+        </div>
+      </div>
+      <div id="layoutStage">
+        <div class="stage-empty" id="stageEmpty">
+          <svg class="big" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
+          <strong>第 1 步：导入工厂布局图</strong>
+          <span>支持 PNG / JPG / WebP，导入后可点击右上角「划分房间」在图上圈出各房间</span>
+          <button class="btn primary" id="btnLayoutEmpty">选择布局图文件</button>
+        </div>
+        <img id="layoutImg" alt="工厂布局图" style="display:none">
+        <svg id="roomSvg" style="display:none"></svg>
+        <div class="stage-hint" id="stageHint" style="display:none"></div>
+      </div>
+      <input type="file" id="fileLayout" accept="image/*" hidden>
+      <input type="file" id="fileExcel" accept=".xlsx,.xls,.csv" hidden>
+      <input type="file" id="filePhotos" accept="image/*" multiple hidden>
+      <input type="file" id="fileHazardPhoto" accept="image/*" multiple hidden>
+      <input type="file" id="fileHazardRect" accept="image/*" multiple hidden>
+    </section>
+
+    <aside class="panel side-panel">
+      <div class="tabs" id="tabs">
+        <div class="tab active" data-tab="overview">总览</div>
+        <div class="tab" data-tab="room">房间详情</div>
+        <div class="tab" data-tab="dup">重复隐患<span class="cnt red" id="dupCnt">0</span></div>
+        <div class="tab" data-tab="rooms">房间清单<span class="cnt" id="roomCnt">0</span></div>
+      </div>
+      <div class="tabbody" id="tabbody"></div>
+    </aside>
+  </main>
+
+  <section class="panel table-panel">
+    <div class="panel-hd">
+      <h2><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18"/><path d="M3 12h18"/><path d="M4 4l16 16"/></svg>隐患明细</h2>
+      <span class="sub" id="tableSub">共 0 条</span>
+      <span class="spacer"></span>
+      <label class="lbl">搜索描述
+        <input type="text" id="searchDesc" placeholder="输入关键词…" style="width:200px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:6px 10px;font-size:12.5px;outline:none;">
+      </label>
+    </div>
+    <div class="table-wrap">
+      <table id="dataTable">
+        <colgroup>
+          <col style="width:8%"><col style="width:8%"><col style="width:7%"><col style="width:7%"><col style="width:9%"><col style="width:6%"><col style="width:7%"><col style="width:6%"><col style="width:8%"><col style="width:27%"><col style="width:7%">
+        </colgroup>
+        <thead><tr>
+          <th>发现时间</th><th>房间位置</th><th>隐患等级</th><th>隐患类别</th><th>重复标记</th><th>检查人</th><th>整改责任部门</th><th>整改人</th><th>照片</th><th>闭环情况</th><th>隐患描述</th><th>操作</th>
+        </tr></thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <footer>
+    <span>隐患等级：一类（高风险）· 二类（中风险）· 三类（低风险）　重复隐患判定：相同房间 + 相同责任部门 + 相同隐患描述，在设定窗口（默认 30 天）内再次出现</span>
+    <span>数据仅保存在本机浏览器（localStorage），不上传服务器</span>
+  </footer>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toastRoot"></div>
+
+<script>
+(function(){
+  var ECHARTS_URLS=[
+    'https://cdnjs.cloudflare.com/ajax/libs/echarts/5.5.0/echarts.min.js',
+    'https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js'
+  ];
+  var XLSX_URLS=[
+    'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js',
+    'https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js'
+  ];
+  function load(urls,cb){
+    var i=0;
+    function next(){
+      if(i>=urls.length){cb(false);return;}
+      var s=document.createElement('script');
+      s.src=urls[i++];
+      s.onload=function(){cb(true);};
+      s.onerror=function(){s.remove();next();};
+      document.head.appendChild(s);
+    }
+    next();
+  }
+  load(ECHARTS_URLS,function(okE){
+    load(XLSX_URLS,function(okX){
+      window.__LIBS__={echarts:okE,xlsx:okX};
+      window.dispatchEvent(new Event('doubao-libs-ready'));
+    });
+  });
+})();
+</script>
+<script>
+'use strict';
+/* ================= 常量 ================= */
+const C_LEVELS=['#EF4444','#F59E0B','#2DD4BF'];
+const C_CATS  =['#F97316','#38BDF8','#A3E635','#FACC15','#C084FC','#34D399','#F472B6','#94A3B8'];
+const C_DPTS  =['#38BDF8','#F59E0B','#34D399','#F472B6','#A3E635','#60A5FA','#FBBF24','#E879F9','#4ADE80','#FDA4AF','#67E8F9','#C4B5FD'];
+const LEVEL_ORDER=['一类隐患','二类隐患','三类隐患'];
+const CAT_ORDER=['电气安全','设备安全','化学品安全','消防安全','劳保用品安全','文件管理','其他安全'];
+const FIELDS=[
+  {key:'dept',    label:'责任部门', kw:['责任部门','整改责任部门','部门','单位','科室','责任人','归属']},
+  {key:'level',   label:'隐患等级', kw:['隐患等级','等级','级别','风险等级']},
+  {key:'category',label:'隐患类别', kw:['隐患类别','类别','类型','分类']},
+  {key:'time',    label:'发现时间', kw:['发现时间','日期时间','日期','时间','发现日期']},
+  {key:'room',    label:'房间位置', kw:['房间位置','房间','位置','区域','地点','场所','区域位置']},
+  {key:'desc',    label:'隐患描述', kw:['隐患描述','描述','内容','问题描述','隐患内容','情况描述']},
+  {key:'person',  label:'检查人', kw:['检查人','隐患发现人','发现人','发现人员','上报人','报告人','提报人','发现者','检查人员']},
+  {key:'rectPerson',label:'整改人', kw:['整改人','整改责任人','整改负责','整改员','闭环人','整改人员','整改负责人']},
+  {key:'photo',   label:'隐患照片', kw:['隐患照片','照片','图片','隐患图片','附件','图片附件','image','photo']},
+  {key:'closed',  label:'隐患闭环情况', kw:['闭环情况','闭环','整改情况','是否闭环','销项','closed','rectify']},
+  {key:'rect',    label:'整改照片', kw:['整改照片','整改图片','闭环照片','整改后照片','整改前照片','rectphoto']},
+];
+
+/* ================= 状态 ================= */
+const state={
+  layoutImage:null, naturalW:0, naturalH:0,
+  rooms:[],               // {id,name,x,y,w,h} 归一化 0..1
+  hazards:[],             // {dept,level,category,time:Date,room,desc,person,photoRaw,photos:[{src,label}],roomKey,roomMatched}
+  attachments:{},         // 文件名(小写) -> dataURL（隐患照片附件）
+  roomSeq:1,
+  selectedRoomId:null,
+  drawMode:false,
+  tab:'overview',
+  dupWindow:30,
+  highlightDup:true,
+  search:'',
+  filters:{from:null,to:null,level:'all',cat:'all',dept:'all'},
+  notify:{sendkey:'',monthly:true,lastPush:''},   // Server酱（方糖）微信推送配置
+};
+const LS_KEY='safety-hazard-dashboard-v1';
+let chartInstances={};
+
+/* ================= DOM ================= */
+const $=s=>document.querySelector(s);
+const el=(tag,cls,html)=>{const e=document.createElement(tag);if(cls)e.className=cls;if(html!=null)e.innerHTML=html;return e;};
+const SVG_NS='http://www.w3.org/2000/svg';
+const img=$('#layoutImg'), svg=$('#roomSvg');
+const esc=s=>String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,7);
+
+/* ================= 工具 ================= */
+function toast(msg,type){
+  const t=el('div','toast'+(type?' '+type:''),msg);
+  $('#toastRoot').appendChild(t);
+  setTimeout(()=>{t.style.transition='opacity .3s';t.style.opacity='0';setTimeout(()=>t.remove(),320);},3400);
+}
+function norm(s){return String(s==null?'':s).trim().replace(/\s+/g,'').replace(/[（]/g,'(').replace(/[）]/g,')').toLowerCase();}
+function fmtDate(d){if(!d)return '—';const p=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate());}
+function monthKey(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');}
+function parseDate(v){
+  if(v==null||v==='')return null;
+  if(v instanceof Date)return isNaN(v)?null:v;
+  if(typeof v==='number'){
+    if(v>1e12)return new Date(v);
+    if(v>20000&&v<60000){if(typeof XLSX!=='undefined'){const d=XLSX.SSF.parse_date_code(v);if(d)return new Date(d.y,d.m-1,d.d);}}
+    return null;
+  }
+  const s=String(v).trim();
+  let m=s.match(/^(\d{4})[年\-\/\.](\d{1,2})[月\-\/\.](\d{1,2})日?$/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{4})(\d{2})(\d{2})$/);
+  if(m)return new Date(+m[1],+m[2]-1,+m[3]);
+  m=s.match(/^(\d{1,2})[月\-\/\.](\d{1,2})日?$/);
+  if(m){const now=new Date();return new Date(now.getFullYear(),+m[1]-1,+m[2]);}
+  const t=Date.parse(s.replace(/[年]/g,'-'));
+  if(!isNaN(t))return new Date(t);
+  return null;
+}
+function normLevel(v){
+  const s=String(v==null?'':v).trim();
+  if(/三|Ⅲ/.test(s))return '三类隐患';
+  if(/二|Ⅱ/.test(s))return '二类隐患';
+  if(/一|Ⅰ/.test(s))return '一类隐患';
+  if(/^[1-3]$/.test(s))return ['一类隐患','二类隐患','三类隐患'][+s-1];
+  return '未分级';
+}
+function normCategory(v){
+  const s=String(v==null?'':v);
+  if(/电气|用电/.test(s))return '电气安全';
+  if(/设备/.test(s))return '设备安全';
+  if(/化学|危化|msds/i.test(s))return '化学品安全';
+  if(/消防|灭火|通道|疏散/.test(s))return '消防安全';
+  if(/劳保|防护用品|ppe|安全帽|手套|护目镜/i.test(s))return '劳保用品安全';
+  if(/文件|档案|记录|台账|资料/.test(s))return '文件管理';
+  return '其他安全';
+}
+function matchRoom(raw){
+  const n=norm(raw);
+  if(!n)return null;
+  for(const r of state.rooms){if(norm(r.name)===n)return r.name;}
+  for(const r of state.rooms){const rn=norm(r.name);if(rn.length>=2&&(n.includes(rn)||rn.includes(n)))return r.name;}
+  return null;
+}
+/* 隐患照片：Excel 列里可填文件名（与「上传照片附件」按文件名关联）或 URL（隐患照片与整改照片共用） */
+function resolvePhoto(v){
+  const s=String(v==null?'':v).trim();
+  if(!s)return [];
+  return s.split(/[,，;；\s]+/).filter(Boolean).map(p=>{
+    const base=p.split(/[\\/]/).pop().toLowerCase();
+    if(base&&state.attachments[base])return {src:state.attachments[base],label:p};
+    if(/^(https?:\/\/|data:)/i.test(p))return {src:p,label:p};
+    return null;
+  }).filter(Boolean);
+}
+function normClosed(v){
+  const s=String(v==null?'':v).trim();
+  if(!s)return '';
+  if(/已闭环|已整改|已关闭|已销项|已完成|是|闭环$/.test(s))return '已闭环';
+  if(/整改中|进行中|处理中|待复查|待验收/.test(s))return '整改中';
+  return '';
+}
+function readImageFile(file,cb,max){
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const im=new Image();
+    im.onload=()=>{
+      const M=max||1280;
+      let w=im.naturalWidth,h=im.naturalHeight;
+      if(w>M||h>M){const s=Math.min(M/w,M/h);w=Math.round(w*s);h=Math.round(h*s);}
+      const cv=document.createElement('canvas');cv.width=w;cv.height=h;
+      cv.getContext('2d').drawImage(im,0,0,w,h);
+      cb(cv.toDataURL('image/jpeg',0.82));
+    };
+    im.onerror=()=>cb(null);
+    im.src=e.target.result;
+  };
+  reader.onerror=()=>cb(null);
+  reader.readAsDataURL(file);
+}
+function samplePhoto(text,color){
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="400" height="300">'
+    +'<rect width="400" height="300" fill="#101B2E"/>'
+    +'<rect x="22" y="22" width="356" height="256" rx="12" fill="none" stroke="'+color+'" stroke-width="3"/>'
+    +'<circle cx="200" cy="108" r="36" fill="none" stroke="'+color+'" stroke-width="6"/>'
+    +'<path d="M200 124v42" stroke="'+color+'" stroke-width="8" stroke-linecap="round"/>'
+    +'<path d="M182 148h36" stroke="'+color+'" stroke-width="8" stroke-linecap="round"/>'
+    +'<text x="200" y="212" text-anchor="middle" font-size="22" fill="#E8EEF7" font-family="Microsoft YaHei,sans-serif">'+text+'</text>'
+    +'<text x="200" y="244" text-anchor="middle" font-size="14" fill="#8CA0BF" font-family="Microsoft YaHei,sans-serif">示例隐患照片 · 点击可放大</text></svg>';
+  return 'data:image/svg+xml;utf8,'+encodeURIComponent(svg);
+}
+
+/* ================= 持久化 ================= */
+function saveState(){
+  try{
+    const s={layoutImage:state.layoutImage,naturalW:state.naturalW,naturalH:state.naturalH,
+      rooms:state.rooms,hazards:state.hazards,roomSeq:state.roomSeq,dupWindow:state.dupWindow,
+      attachments:state.attachments,notify:state.notify};
+    localStorage.setItem(LS_KEY,JSON.stringify(s));
+    const h=$('#saveHint');h.textContent='已自动保存 '+new Date().toLocaleTimeString();
+  }catch(e){toast('本地存储空间不足，照片等大体积数据未保存（本页仍可用，刷新后照片需重新上传）','err');}
+}
+function applyDeepLink(){
+  const m=location.search.match(/[?&]room=([^&]+)/);
+  if(!m)return;
+  const nm=decodeURIComponent(m[1]);
+  const r=state.rooms.find(rr=>rr.name===nm);
+  if(r){state.selectedRoomId=r.id;state.tab='room';renderTabs();renderLayout();renderSide();}
+}
+function loadState(){
+  try{
+    const raw=localStorage.getItem(LS_KEY);
+    if(!raw)return;
+    const s=JSON.parse(raw);
+    if(!s)return;
+    state.layoutImage=s.layoutImage||null;state.naturalW=s.naturalW||0;state.naturalH=s.naturalH||0;
+    state.rooms=s.rooms||[];state.hazards=s.hazards||[];state.roomSeq=s.roomSeq||state.rooms.length+1;
+    state.dupWindow=s.dupWindow||30;state.attachments=s.attachments||{};
+    state.notify=s.notify?Object.assign({sendkey:'',monthly:true,lastPush:''},s.notify):{sendkey:'',monthly:true,lastPush:''};
+    state.hazards.forEach(h=>{if(!h._id)h._id=uid();if(h.closed==null)h.closed='';if(!h.rectPhotos)h.rectPhotos=[];if(!h.rectNote)h.rectNote='';});
+  }catch(e){console.warn('loadState failed',e);}
+}
+
+/* ================= 布局图 ================= */
+function setLayout(dataUrl,imgW,imgH){
+  state.layoutImage=dataUrl;state.naturalW=imgW;state.naturalH=imgH;
+  img.src=dataUrl;img.style.display='block';
+  svg.style.display='block';svg.setAttribute('viewBox','0 0 '+imgW+' '+imgH);
+  $('#stageEmpty').style.display='none';
+  const hint=$('#stageHint');
+  hint.style.display='flex';
+  if(state.rooms.length===0)hint.innerHTML='点击工具栏「<b>划分房间</b>」后，在布局图上按住鼠标拖拽，圈出每个房间并命名';
+  else hint.innerHTML='点击房间查看详情；「划分房间」模式下可继续拖拽新增房间';
+  $('#layoutSub').textContent=imgW+' × '+imgH+' · '+state.rooms.length+' 个房间';
+  renderLayout();
+}
+function handleLayoutFile(file){
+  if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const url=e.target.result;
+    const im=new Image();
+    im.onload=()=>{
+      if(state.rooms.length>0&&!confirm('导入新的布局图将清空当前已划分的房间，是否继续？'))return;
+      state.rooms=[];state.roomSeq=1;state.selectedRoomId=null;
+      setLayout(url,im.naturalWidth,im.naturalHeight);
+      saveState();renderAll();toast('布局图已导入，请划分房间','ok');
+    };
+    im.onerror=()=>toast('图片无法读取，请更换文件','err');
+    im.src=url;
+  };
+  reader.readAsDataURL(file);
+}
+
+/* ================= 房间绘制（SVG 交互） ================= */
+let drag=null; // {type:'draw'|'move'|'resize', roomId, x0,y0, start...}
+function svgPoint(e){
+  const r=svg.getBoundingClientRect();
+  const W=state.naturalW||1,H=state.naturalH||1;
+  return {x:(e.clientX-r.left)/r.width*W, y:(e.clientY-r.top)/r.height*H};
+}
+function addRoom(x,y,w,h){
+  const room={id:uid(),name:'房间 '+state.roomSeq,x,y,w,h};
+  state.roomSeq++;state.rooms.push(room);state.selectedRoomId=room.id;
+  renderLayout();renderSide();saveState();
+  return room;
+}
+/* 内联房间命名框 */
+let nameEditor=null;
+function closeNameEditor(save){
+  if(!nameEditor)return;
+  const {room,input}=nameEditor;
+  const v=input.value.trim();
+  if(save&&v){room.name=v;saveState();renderLayout();renderSide();toast('房间已重命名为「'+room.name+'」','ok');}
+  nameEditor=null;
+  try{input.remove();}catch(e){}
+}
+function openNameEditor(roomId,anchor){
+  closeNameEditor(false);
+  const room=state.rooms.find(r=>r.id===roomId);
+  if(!room)return;
+  const input=document.createElement('input');
+  input.value=room.name;
+  input.className='name-editor';
+  const stage=$('#layoutStage');
+  stage.appendChild(input);
+  nameEditor={room,input};
+  const sr=stage.getBoundingClientRect();
+  if(anchor){
+    const ar=anchor.getBoundingClientRect();
+    input.style.left=Math.max(4,ar.left-sr.left)+'px';
+    input.style.top=Math.max(4,ar.bottom-sr.top+4)+'px';
+  }else{
+    const ir=img.getBoundingClientRect();
+    input.style.left=Math.max(4,(ir.left-sr.left+room.x*ir.width))+'px';
+    input.style.top=Math.max(2,(ir.top-sr.top+room.y*ir.height-34))+'px';
+  }
+  input.focus();input.select();
+  input.addEventListener('keydown',e=>{
+    e.stopPropagation();
+    if(e.key==='Enter')closeNameEditor(true);
+    else if(e.key==='Escape')closeNameEditor(false);
+  });
+  input.addEventListener('blur',()=>closeNameEditor(true));
+}
+function svgDown(e){
+  if(!state.layoutImage)return;
+  const p=svgPoint(e);
+  const t=e.target;
+  if(state.drawMode){
+    /* 划分模式下：按在已有房间上 → 直接进入移动/缩放调整（复用下方分支）；按在空白处 → 拖拽画新房间 */
+    if(!(t.classList&&(t.classList.contains('roombody')||t.classList.contains('resize-handle')))){
+      e.preventDefault();
+      svg.setPointerCapture(e.pointerId);
+      drag={type:'draw',x0:p.x,y0:p.y};
+      const pr=document.createElementNS(SVG_NS,'rect');
+      pr.setAttribute('id','drawPreview');svg.appendChild(pr);
+      return;
+    }
+  }
+  if(t.classList&&t.classList.contains('resize-handle')){
+    const room=state.rooms.find(r=>r.id===t.dataset.rid);
+    if(room){e.preventDefault();svg.setPointerCapture(e.pointerId);drag={type:'resize',room,x0:p.x,y0:p.y,sx:room.x,sy:room.y,sw:room.w,sh:room.h};}
+    return;
+  }
+  if(t.classList&&t.classList.contains('roombody')){
+    const room=state.rooms.find(r=>r.id===t.dataset.rid);
+    if(!room)return;
+    state.selectedRoomId=room.id;
+    if(!state.drawMode&&(state.tab==='overview'||state.tab==='dup')){state.tab='room';}
+    renderLayout();renderTabs();renderSide();
+    e.preventDefault();svg.setPointerCapture(e.pointerId);
+    drag={type:'move',room,x0:p.x,y0:p.y,sx:room.x,sy:room.y};
+    return;
+  }
+  state.selectedRoomId=null;renderLayout();renderSide();
+}
+function svgMove(e){
+  if(!drag)return;
+  const p=svgPoint(e);
+  if(drag.type==='draw'){
+    const pr=document.getElementById('drawPreview');if(!pr)return;
+    const x=Math.min(drag.x0,p.x),y=Math.min(drag.y0,p.y);
+    const w=Math.abs(p.x-drag.x0),h=Math.abs(p.y-drag.y0);
+    pr.setAttribute('x',x);pr.setAttribute('y',y);pr.setAttribute('width',w);pr.setAttribute('height',h);
+    return;
+  }
+  const r=drag.room;
+  const W=state.naturalW||1,H=state.naturalH||1;
+  if(drag.type==='move'){
+    let nx=drag.sx+(p.x-drag.x0)/W,ny=drag.sy+(p.y-drag.y0)/H;
+    nx=Math.max(0,Math.min(1-r.w,nx));ny=Math.max(0,Math.min(1-r.h,ny));
+    r.x=nx;r.y=ny;
+    if(Math.abs(p.x-drag.x0)>5||Math.abs(p.y-drag.y0)>5)drag.moved=true;
+  }else if(drag.type==='resize'){
+    const MIN=12/Math.max(W,H);
+    let w=Math.max(MIN,drag.sw+(p.x-drag.x0)/W),h=Math.max(MIN,drag.sh+(p.y-drag.y0)/H);
+    w=Math.min(1-drag.sx,w);h=Math.min(1-drag.sy,h);
+    r.w=w;r.h=h;
+  }
+  renderLayout();
+}
+function svgUp2(e){
+  if(!drag)return;
+  const d=drag;drag=null;
+  const pr=document.getElementById('drawPreview');if(pr)pr.remove();
+  if(d.type==='draw'){
+    const p=svgPoint(e);
+    const W=state.naturalW||1,H=state.naturalH||1;
+    const x=Math.min(d.x0,p.x)/W,y=Math.min(d.y0,p.y)/H;
+    const w=Math.abs(p.x-d.x0)/W,h=Math.abs(p.y-d.y0)/H;
+    if(w*W>14&&h*H>14){
+      const room=addRoom(x,y,w,h);
+      toast('已添加房间，输入名称后回车确认','ok');
+      openNameEditor(room.id);
+    }
+    else toast('拖拽范围太小，已取消');
+  }else if(d.type==='move'){
+    if(d.moved){saveState();renderAll();}
+    else if(!state.drawMode){openRoomModal(d.room.id);}
+  }else if(d.type==='resize'){saveState();renderAll();}
+}
+svg.addEventListener('pointerdown',svgDown);
+svg.addEventListener('pointermove',svgMove);
+svg.addEventListener('pointerup',svgUp2);
+svg.addEventListener('pointercancel',svgUp2);
+
+/* ================= 布局渲染 ================= */
+function renderLayout(){
+  if(!state.layoutImage)return;
+  const W=state.naturalW||1,H=state.naturalH||1;
+  const fhAll=getFilteredHazards();
+  const dupGroups=findDuplicates(fhAll,state.dupWindow);
+  const dupRooms=new Map();
+  for(const g of dupGroups){const n=norm(g.room);dupRooms.set(n,(dupRooms.get(n)||0)+1);}
+  const fs=Math.max(13,Math.round(W/90));
+  let out='',chipOuts='';
+  for(const r of state.rooms){
+    const x=r.x*W,y=r.y*H,w=r.w*W,h=r.h*H;
+    const n=norm(r.name);
+    const dupCount=dupRooms.get(n)||0;
+    const cls=['room',r.id===state.selectedRoomId?'selected':'',dupCount>0&&state.highlightDup?'dup':''].filter(Boolean).join(' ');
+    const labelY=(r.y<0.055)?y+fs*1.35:y-6;
+    out+='<g class="'+cls+'" data-id="'+r.id+'">'
+      +'<rect class="roombody" data-rid="'+r.id+'" x="'+x+'" y="'+y+'" width="'+w+'" height="'+h+'" rx="6"></rect>'
+      +'<text class="rname" x="'+(x+8)+'" y="'+labelY+'" font-size="'+fs+'">'+esc(r.name)+'</text>';
+    /* 房间框内统计：总数 / 一类 / 二类 / 三类（无隐患也显示 总 0；字体随房间自动缩小，尽量全部显示明细） */
+    const roomH=fhAll.filter(h=>h.roomKey===r.name);
+    const c1=roomH.filter(h=>h.level==='一类隐患').length;
+    const c2=roomH.filter(h=>h.level==='二类隐患').length;
+    const c3=roomH.filter(h=>h.level==='三类隐患').length;
+    if(w>=140){
+      /* 较宽房间：一行完整显示 总 N · 一 x · 二 y · 三 z */
+      const fs2=Math.max(8,Math.min(14,Math.min(fs*0.7,w/14,h/5)));
+      const cxm=x+w/2,cy=y+h/2+fs2*0.35;
+      out+='<text class="rstat" x="'+cxm+'" y="'+cy+'" font-size="'+fs2+'" text-anchor="middle">总 '+roomH.length+' · '
+        +'<tspan fill="#EF4444">一 '+c1+'</tspan> · <tspan fill="#F59E0B">二 '+c2+'</tspan> · <tspan fill="#2DD4BF">三 '+c3+'</tspan></text>';
+    }else if(w>=70&&h>=40){
+      /* 中等房间：两行小字显示 总 N 与 一x 二y 三z */
+      const fs3=Math.max(6.5,Math.min(10,Math.min(fs*0.55,w/15,h/11)));
+      const cxm=x+w/2,cy=y+h/2;
+      out+='<text class="rstat" x="'+cxm+'" y="'+(cy-fs3*0.35)+'" font-size="'+fs3+'" text-anchor="middle">总 '+roomH.length+'</text>'
+        +'<text class="rstat" x="'+cxm+'" y="'+(cy+fs3*1.25)+'" font-size="'+fs3+'" text-anchor="middle">一 <tspan fill="#EF4444">'+c1+'</tspan> 二 <tspan fill="#F59E0B">'+c2+'</tspan> 三 <tspan fill="#2DD4BF">'+c3+'</tspan></text>';
+    }else{
+      /* 房间过小放不下：在房框外（名称上方，顶部不足时放框下方）绘制悬浮计数标签，同样含一/二/三类明细 */
+      const fs3=8.5,t1='总 '+roomH.length,t2='一'+c1+' 二'+c2+' 三'+c3;
+      const cw=Math.max(t1.length,t2.length)*fs3*0.62+12,chh=fs3*2+10;
+      let cxx=x+w-2,cyy=y-fs-8;
+      if(cyy-chh<0)cyy=y+h+3;
+      if(cyy+chh>H-2)cyy=y-3;
+      if(cxx-cw<0)cxx=cw;
+      if(cxx>W-4)cxx=W-4;
+      chipOuts+='<g class="rstat-chip" style="pointer-events:none">'
+        +'<rect x="'+(cxx-cw)+'" y="'+(cyy-chh)+'" width="'+cw+'" height="'+chh+'" rx="4" fill="#0B1526" stroke="rgba(34,48,75,.95)"/>'
+        +'<text x="'+(cxx-cw+cw/2)+'" y="'+(cyy-chh/2-fs3*0.35)+'" font-size="'+fs3+'" text-anchor="middle" fill="#E8EEF7">'+t1+'</text>'
+        +'<text x="'+(cxx-cw+cw/2)+'" y="'+(cyy-chh/2+fs3*1.15)+'" font-size="'+fs3+'" text-anchor="middle" fill="#E8EEF7">一 <tspan fill="#EF4444">'+c1+'</tspan> 二 <tspan fill="#F59E0B">'+c2+'</tspan> 三 <tspan fill="#2DD4BF">'+c3+'</tspan></text></g>';
+    }
+    if(dupCount>0&&state.highlightDup){
+      const bx=x+w,by=y;
+      out+='<g class="rbadge"><circle cx="'+bx+'" cy="'+by+'" r="'+(fs*0.62)+'"></circle>'
+        +'<text x="'+bx+'" y="'+by+'" font-size="'+(fs*0.78)+'" text-anchor="middle" dominant-baseline="central">'+dupCount+'</text></g>';
+    }
+    if(r.id===state.selectedRoomId){
+      out+='<circle class="handle" cx="'+x+'" cy="'+y+'" r="5"></circle>'
+        +'<circle class="handle" cx="'+(x+w)+'" cy="'+y+'" r="5"></circle>'
+        +'<circle class="handle" cx="'+x+'" cy="'+(y+h)+'" r="5"></circle>'
+        +'<rect class="resize-handle" data-rid="'+r.id+'" x="'+(x+w-9)+'" y="'+(y+h-9)+'" width="13" height="13" rx="3"></rect>';
+    }
+    out+='</g>';
+  }
+  svg.innerHTML=out+chipOuts;
+}
+
+/* ================= Excel 解析 ================= */
+function scoreHeader(cell){
+  const s=String(cell==null?'':cell).trim();if(!s)return 0;
+  let best=0;
+  for(const f of FIELDS){
+    let sc=0;
+    for(const k of f.kw){if(s===k)sc=Math.max(sc,2);else if(s.includes(k))sc=Math.max(sc,1);}
+    if(sc>best)best=sc;
+  }
+  return best;
+}
+function detectHeader(aoa){
+  let bestRow=-1,bestScore=0;
+  for(let i=0;i<Math.min(aoa.length,12);i++){
+    let sc=0;
+    for(const c of (aoa[i]||[]))sc+=scoreHeader(c);
+    if(sc>bestScore){bestScore=sc;bestRow=i;}
+  }
+  return bestScore>=3?bestRow:-1;
+}
+function autoMap(header){
+  const map={};
+  for(const f of FIELDS){
+    let best=-1,bestSc=0;
+    header.forEach((c,i)=>{const sc=scoreHeader(c);if(sc>bestSc){bestSc=sc;best=i;}});
+    if(best>=0){map[f.key]=best;header[best]='__used__';}
+  }
+  return map;
+}
+function buildHazards(aoa,headerRow,map){
+  const header=aoa[headerRow].map(c=>String(c==null?'':c).trim());
+  const col=i=>header[i]||('');
+  const hazards=[];
+  let skipped=0;
+  for(let i=headerRow+1;i<aoa.length;i++){
+    const row=aoa[i]||[];
+    const get=k=>row[map[k]]!=null?row[map[k]]:'';
+    const dept=String(get('dept')==null?'':get('dept')).trim();
+    const roomRaw=String(get('room')==null?'':get('room')).trim();
+    const desc=String(get('desc')==null?'':get('desc')).trim();
+    const person=String(get('person')==null?'':get('person')).trim();
+    const rectPerson=String(get('rectPerson')==null?'':get('rectPerson')).trim();
+    const photoRaw=String(get('photo')==null?'':get('photo')).trim();
+    const rectRaw=String(get('rect')==null?'':get('rect')).trim();
+    const time=parseDate(get('time'));
+    if(!dept&&!roomRaw&&!desc&&!time){continue;}
+    if(!roomRaw||!time){skipped++;continue;}
+    const level=normLevel(get('level'));
+    const category=normCategory(get('category'));
+    const matchedRoom=matchRoom(roomRaw);
+    hazards.push({_id:uid(),dept:dept||'未填写',level,category,time,room:roomRaw,desc:desc||'（无描述）',
+      person:person||'未填写',rectPerson,photoRaw,photos:resolvePhoto(photoRaw),
+      closed:normClosed(get('closed')),rectNote:'',rectRaw,rectPhotos:resolvePhoto(rectRaw),
+      roomKey:matchedRoom||roomRaw,roomMatched:!!matchedRoom});
+  }
+  return {hazards,skipped};
+}
+function parseCSV(text){
+  const rows=[];let row=[],cur='',inQ=false;
+  for(let i=0;i<text.length;i++){
+    const c=text[i];
+    if(inQ){
+      if(c==='"'){if(text[i+1]==='"'){cur+='"';i++;}else inQ=false;}
+      else cur+=c;
+    }else if(c==='"')inQ=true;
+    else if(c===','){row.push(cur);cur='';}
+    else if(c==='\n'){row.push(cur);rows.push(row);row=[];cur='';}
+    else if(c!=='\r')cur+=c;
+  }
+  if(cur!==''||row.length){row.push(cur);rows.push(row);}
+  return rows.filter(r=>r.some(c=>String(c==null?'':c).trim()!==''));
+}
+async function handleExcelFile(file){
+  if(!file)return;
+  let aoa;
+  const isCsv=/\.csv$/i.test(file.name);
+  if(isCsv){
+    const buf=await file.arrayBuffer();
+    let text;
+    try{text=new TextDecoder('utf-8',{fatal:true}).decode(buf);}
+    catch(e){text=new TextDecoder('gbk').decode(buf);}
+    aoa=parseCSV(text.replace(/^\uFEFF/,''));
+  }else{
+    if(typeof XLSX==='undefined'){toast('表格解析库未加载（当前无网络），暂只支持 CSV 文件；可先「下载模板」获取 CSV 模板','err');return;}
+    const buf=await file.arrayBuffer();
+    let wb;
+    try{wb=XLSX.read(buf,{type:'array',cellDates:true});}
+    catch(e){toast('Excel 文件解析失败：'+e.message,'err');return;}
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    aoa=XLSX.utils.sheet_to_json(ws,{header:1,defval:''});
+  }
+  const headerRow=detectHeader(aoa);
+  if(headerRow<0){toast('未在表格中找到表头（需包含：责任部门/隐患等级/隐患类别/发现时间/房间位置/隐患描述 等字段），请检查文件','err');return;}
+  const header=aoa[headerRow].map(c=>String(c==null?'':c).trim());
+  const map=autoMap(header.slice());
+  pendingImport={aoa,headerRow,map,fileName:file.name};
+  showMappingModal();
+}
+let pendingImport=null;
+function showMappingModal(){
+  const header=pendingImport.aoa[pendingImport.headerRow].map(c=>String(c==null?'':c).trim());
+  const opts=header.map((c,i)=>'<option value="'+i+'"'+(pendingImport.map&&Object.values(pendingImport.map).includes(i)?' disabled':'')+'>列 '+(i+1)+'：'+(c||'（空）')+'</option>').join('');
+  const rows=FIELDS.map(f=>{
+    const sel=pendingImport.map&&pendingImport.map[f.key]!=null?pendingImport.map[f.key]:'';
+    const marked=sel!==''?' selected':'';
+    return '<div class="map-row"><div class="k">'+f.label+'<br><b>'+({dept:'整改责任部门',level:'隐患等级',category:'隐患类别',time:'发现时间',room:'房间位置',desc:'隐患描述',person:'检查人',rectPerson:'整改人',photo:'隐患照片',closed:'隐患闭环情况',rect:'整改照片'})[f.key]+'</b></div>'
+      +'<select data-field="'+f.key+'"><option value="">— 未映射 —</option>'+opts.replace(/ selected/g,'')+'</select></div>';
+  }).join('');
+  const modal=el('div','modal-mask');
+  modal.innerHTML='<div class="modal"><div class="modal-hd"><h3>确认字段映射</h3><span style="color:var(--faint);font-size:12px">'+esc(pendingImport.fileName)+'</span></div>'
+    +'<div class="modal-bd"><p style="font-size:13px;color:var(--muted);margin-bottom:6px">为每个字段选择对应的表格列（已按表头自动匹配，可手动调整）：</p>'
+    +rows
+    +(state.hazards.length?'<div class="note">⚠ 导入后将<b style="color:var(--danger)">替换</b>当前已存在的 '+state.hazards.length+' 条隐患数据</div>'
+      :'<div class="note">提示：自动识别字段 —— 责任部门（整改责任部门）、隐患等级（一类/二类/三类）、隐患类别（电气/设备/化学品/消防/劳保/文件/其他）、发现时间、房间位置、隐患描述、检查人、整改人、隐患照片（照片列填文件名，与「上传照片附件」按文件名关联；也可填 http 链接）、隐患闭环情况（已闭环/整改中/未闭环）、整改照片（文件名或链接）。等级与类别文字可自动归一化。</div>')
+    +'</div><div class="modal-ft"><button class="btn" id="mapCancel">取消</button><button class="btn primary" id="mapOk">确认导入</button></div></div>';
+  $('#modalRoot').appendChild(modal);
+  // 预填自动映射
+  const pending=pendingImport;
+  modal.querySelectorAll('select').forEach(sel=>{
+    const f=pending.map&&pending.map[sel.dataset.field];
+    if(f!=null)sel.value=f;
+  });
+  modal.querySelector('#mapCancel').onclick=()=>{modal.remove();pendingImport=null;};
+  modal.querySelector('#mapOk').onclick=()=>{
+    const map={};let miss=[];
+    modal.querySelectorAll('select').forEach(sel=>{
+      if(sel.value!=='')map[sel.dataset.field]=+sel.value;else miss.push(sel.dataset.field);
+    });
+    if(miss.length){
+      const required=['time','room','desc'];
+      const missReq=required.filter(k=>!map[k]);
+      if(missReq.length){toast('必填字段未映射：'+missReq.join('、'),'err');return;}
+      const optMiss=miss.filter(k=>required.indexOf(k)<0);
+      if(optMiss.length)toast('以下字段未映射，将使用默认值：'+optMiss.join('、'),'ok');
+    }
+    const r=buildHazards(pending.aoa,pending.headerRow,map);
+    state.hazards=r.hazards;
+    modal.remove();pendingImport=null;
+    saveState();renderAll();
+    const un=r.hazards.filter(h=>!h.roomMatched).length;
+    toast('导入成功：'+r.hazards.length+' 条'+(r.skipped?'，跳过 '+r.skipped+' 行（缺时间/房间）':'')+(un?'，其中 '+un+' 条房间未匹配布局图':'')+(r.skipped||un?'。请检查后调整':'。'), r.skipped||un?'':'ok');
+  };
+}
+function downloadTemplate(){
+  const data=[['责任部门','隐患等级','隐患类别','发现时间','房间位置','隐患描述','检查人','整改人','隐患照片','隐患闭环情况','整改照片'],
+    ['生产部','一类隐患','电气安全','2026-09-01','生产车间A','配电柜门未关闭，存在触电风险','王强','陈刚','dianpei-01.jpg','整改中','dianpei-01.jpg'],
+    ['设备部','二类隐患','设备安全','2026-09-03','生产车间B','传送带防护罩松动','李敏','刘芳','','已闭环',''],
+    ['安环部','三类隐患','消防安全','2026-09-05','成品库','灭火器压力表指针处于黄区','张伟','赵丽','','','']];
+  if(typeof XLSX!=='undefined'){
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:12},{wch:12},{wch:12},{wch:14},{wch:14},{wch:46},{wch:12},{wch:12},{wch:14},{wch:14},{wch:14}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'隐患台账');
+    XLSX.writeFile(wb,'隐患数据导入模板.xlsx');
+    toast('模板已下载：隐患数据导入模板.xlsx','ok');
+    return;
+  }
+  const csv=data.map(r=>r.map(c=>'"'+String(c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='隐患数据导入模板.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  toast('已下载 CSV 模板：隐患数据导入模板.csv（当前无网络，Excel 解析库不可用）','ok');
+}
+
+/* ================= 示例数据 ================= */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+function makeSampleLayout(){
+  const rooms=[
+    {name:'原料库',x:60,y:120,w:330,h:260},
+    {name:'生产车间A',x:440,y:100,w:560,h:430},
+    {name:'生产车间B',x:440,y:560,w:560,h:340},
+    {name:'配电房',x:1060,y:100,w:320,h:190},
+    {name:'化学品库',x:1060,y:330,w:320,h:240},
+    {name:'成品库',x:1060,y:610,w:320,h:290},
+  ];
+  const sw=1600,sh=1000;
+  let s='<svg xmlns="http://www.w3.org/2000/svg" width="'+sw+'" height="'+sh+'" viewBox="0 0 '+sw+' '+sh+'">';
+  s+='<rect x="24" y="40" width="1552" height="920" rx="18" fill="#101B2E" stroke="#2A3A5C" stroke-width="6"/>';
+  s+='<rect x="40" y="56" width="1520" height="888" fill="#0B1524"/>';
+  const walls=[{x:400,y:100,w:16,h:800},{x:1030,y:100,w:16,h:800},{x:60,y:560,w:310,h:16},{x:440,y:560,w:550,h:16}];
+  for(const w of walls)s+='<rect x="'+w.x+'" y="'+w.y+'" width="'+w.w+'" height="'+w.h+'" fill="#2A3A5C"/>';
+  const fills=['#123A3A','#1A3040','#1A3040','#3A2E12','#3A2514','#14283A'];
+  const labels={};
+  rooms.forEach((r,i)=>{
+    s+='<rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="'+r.h+'" rx="10" fill="'+fills[i]+'" opacity="0.85" stroke="#2A3A5C" stroke-width="3"/>';
+    s+='<rect x="'+r.x+'" y="'+r.y+'" width="'+r.w+'" height="28" rx="10" fill="#22314F"/>';
+    s+='<text x="'+(r.x+10)+'" y="'+(r.y+20)+'" font-size="20" fill="#D7E3F5" font-family="Microsoft YaHei,sans-serif">'+r.name+'</text>';
+    s+='<text x="'+(r.x+r.w/2)+'" y="'+(r.y+r.h/2)+'" font-size="17" fill="#5F7298" text-anchor="middle" font-family="Microsoft YaHei,sans-serif">'+(r.name==='生产车间A'||r.name==='生产车间B'?'设备 · 产线':'库房 · 设施')+'</text>';
+  });
+  s+='<text x="60" y="86" font-size="26" fill="#8CA0BF" font-family="Microsoft YaHei,sans-serif">示例工厂一层平面图</text>';
+  s+='</svg>';
+  const blob=new Blob([s],{type:'image/svg+xml;charset=utf-8'});
+  const url=URL.createObjectURL(blob);
+  return new Promise(res=>{
+    const im=new Image();
+    im.onload=()=>{
+      const cv=document.createElement('canvas');cv.width=sw;cv.height=sh;
+      const cx=cv.getContext('2d');cx.drawImage(im,0,0);
+      URL.revokeObjectURL(url);
+      res(cv.toDataURL('image/png'));
+    };
+    im.onerror=()=>{URL.revokeObjectURL(url);res(null);};
+    im.src=url;
+  });
+}
+function makeSampleData(){
+  const rnd=mulberry32(20260917);
+  const pick=a=>a[Math.floor(rnd()*a.length)];
+  const dISO=off=>{const d=new Date(2026,8,17-off);return new Date(d.getFullYear(),d.getMonth(),d.getDate());};
+  const depts=['生产部','设备部','安环部','物流部','行政部'];
+  const persons=['王强','李敏','张伟','刘芳','陈刚','赵丽'];
+  const cats=['电气安全','设备安全','化学品安全','消防安全','劳保用品安全','文件管理','其他安全'];
+  const rows=[];
+  const push=(room,dept,cat,level,off,desc,person,photo,closed,rect,rectNote,rectPerson)=>rows.push({room,dept,cat,level,off,desc,person:person||pick(persons),photo:photo||'',closed:closed||'',rect:rect||'',rectNote:rectNote||'',rectPerson:rectPerson||''});
+  // 工程化重复隐患（窗口期内同一房+部+描述重复出现）
+  push('配电房','设备部','电气安全','一类隐患',2,'配电柜门未关闭，存在触电风险','王强','电气1.jpg','整改中','电气1.jpg','已更换柜门锁具，待复查','刘强');
+  push('配电房','设备部','电气安全','一类隐患',16,'配电柜门未关闭，存在触电风险','王强','电气1.jpg','整改中','电气1.jpg','','刘强');
+  push('配电房','设备部','电气安全','一类隐患',27,'配电柜门未关闭，存在触电风险','王强','电气1.jpg','已闭环','电气1.jpg','已安装自动闭门器并验收','刘强');
+  push('生产车间A','生产部','其他安全','二类隐患',5,'地面油污未及时清理，有滑倒风险','李敏','油污1.jpg','已闭环','油污1.jpg','已清洁并铺设防滑垫','孙磊');
+  push('生产车间A','生产部','其他安全','二类隐患',19,'地面油污未及时清理，有滑倒风险','李敏','油污1.jpg','整改中','油污1.jpg','','孙磊');
+  push('生产车间A','生产部','其他安全','二类隐患',33,'地面油污未及时清理，有滑倒风险','李敏','油污1.jpg','','','','孙磊');
+  push('化学品库','安环部','化学品安全','一类隐患',8,'化学品桶未张贴MSDS标签','陈刚','化学1.jpg','整改中','化学1.jpg','标签已打印，待张贴','周斌');
+  push('化学品库','安环部','化学品安全','一类隐患',23,'化学品桶未张贴MSDS标签','陈刚','化学1.jpg','已闭环','化学1.jpg','','周斌');
+  push('成品库','物流部','消防安全','三类隐患',11,'消防通道堆放货物，通道被部分占用','刘芳','消防1.jpg','已闭环','消防1.jpg','货物已移走，通道恢复','吴昊');
+  push('成品库','物流部','消防安全','三类隐患',29,'消防通道堆放货物，通道被部分占用','刘芳','消防1.jpg','','','','吴昊');
+  push('原料库','物流部','劳保用品安全','三类隐患',14,'叉车作业人员未佩戴安全帽','张伟','劳保1.jpg','整改中','劳保1.jpg','','郑爽');
+  push('原料库','物流部','劳保用品安全','三类隐患',26,'叉车作业人员未佩戴安全帽','张伟','劳保1.jpg','','','','郑爽');
+  // 其余普通隐患
+  const descPool={
+    '电气安全':['插座破损露铜线','临时用电私拉乱接','配电箱内积尘严重','照明灯具脱落悬吊'],
+    '设备安全':['传送带防护罩松动','设备急停按钮失灵','链条张紧度不足','安全光幕未定期测试'],
+    '化学品安全':['化学品未分类存放','容器密封不严','危废桶未加盖','防泄漏托盘缺失'],
+    '消防安全':['灭火器压力不足','疏散指示不亮','消防栓前堆放杂物','安全出口上锁'],
+    '劳保用品安全':['未佩戴护目镜作业','劳保手套破损','防砸鞋不合规','耳塞未按规佩戴'],
+    '文件管理':['设备点检记录缺失','培训签到表未归档','风险告知卡未更新','作业票未闭环'],
+    '其他安全':['地面油污未清理','照明亮度不足','围栏脱焊','物品超高堆放'],
+  };
+  const roomsAll=['原料库','生产车间A','生产车间B','配电房','化学品库','成品库'];
+  for(let i=0;i<42;i++){
+    const room=pick(roomsAll);const dept=pick(depts);const cat=pick(cats);
+    const level=rnd()<0.18?'一类隐患':(rnd()<0.5?'二类隐患':'三类隐患');
+    const off=Math.floor(rnd()*60)+1;
+    rows.push({room,dept,cat,level,off,desc:pick(descPool[cat]),person:pick(persons),photo:''});
+  }
+  const hazards=rows.map(r=>({_id:uid(),dept:r.dept,level:r.level,category:r.cat,time:dISO(r.off),room:r.room,
+    desc:r.desc,person:r.person,photoRaw:r.photo,photos:r.photo?resolvePhoto(r.photo):[],
+    closed:r.closed,rectNote:r.rectNote||'',rectRaw:r.rect,rectPhotos:r.rect?resolvePhoto(r.rect):[],
+    rectPerson:r.rectPerson||'',
+    roomKey:r.room,roomMatched:true}));
+  return hazards;
+}
+async function loadSample(){
+  if(state.layoutImage&&!confirm('加载示例将替换当前全部数据，是否继续？'))return;
+  const url=await makeSampleLayout();
+  if(!url){toast('示例布局生成失败','err');return;}
+  const rooms=[
+    {name:'原料库',x:60/1600,y:120/1000,w:330/1600,h:260/1000},
+    {name:'生产车间A',x:440/1600,y:100/1000,w:560/1600,h:430/1000},
+    {name:'生产车间B',x:440/1600,y:560/1000,w:560/1600,h:340/1000},
+    {name:'配电房',x:1060/1600,y:100/1000,w:320/1600,h:190/1000},
+    {name:'化学品库',x:1060/1600,y:330/1000,w:320/1600,h:240/1000},
+    {name:'成品库',x:1060/1600,y:610/1000,w:320/1600,h:290/1000},
+  ].map((r,i)=>({id:uid(),name:r.name,x:r.x,y:r.y,w:r.w,h:r.h}));
+  state.layoutImage=url;state.naturalW=1600;state.naturalH=1000;
+  state.rooms=rooms;state.roomSeq=7;state.selectedRoomId=null;
+  state.attachments={
+    '电气1.jpg':samplePhoto('配电柜门未关闭','#EF4444'),
+    '油污1.jpg':samplePhoto('地面油污未清理','#F59E0B'),
+    '化学1.jpg':samplePhoto('化学品未贴标签','#F97316'),
+    '消防1.jpg':samplePhoto('通道堆放货物','#EF4444'),
+    '劳保1.jpg':samplePhoto('未佩戴安全帽','#F59E0B'),
+  };
+  state.hazards=makeSampleData();
+  img.src=url;img.style.display='block';
+  svg.style.display='block';svg.setAttribute('viewBox','0 0 1600 1000');
+  $('#stageEmpty').style.display='none';
+  $('#stageHint').style.display='flex';
+  $('#stageHint').innerHTML='点击房间弹出该房间隐患清单；红色房间为窗口期内存在重复隐患';
+  $('#layoutSub').textContent='1600 × 1000 · 6 个房间（示例）';
+  saveState();renderAll();applyDeepLink();
+  toast('示例已加载：6 个房间 + '+state.hazards.length+' 条隐患（含多组重复隐患）','ok');
+}
+
+/* ================= 分析 ================= */
+function getFilteredHazards(){
+  const f=state.filters;
+  return state.hazards.filter(h=>{
+    if(f.from&&h.time<f.from)return false;
+    if(f.to){const d=new Date(f.to);d.setDate(d.getDate()+1);if(h.time>=d)return false;}
+    if(f.level!=='all'&&h.level!==f.level)return false;
+    if(f.cat!=='all'&&h.category!==f.cat)return false;
+    if(f.dept!=='all'&&h.dept!==f.dept)return false;
+    return true;
+  });
+}
+function findDuplicates(hazards,windowDays){
+  const groups=new Map();
+  for(const h of hazards){
+    const key=norm(h.roomKey)+'||'+norm(h.dept)+'||'+norm(h.desc);
+    if(!groups.has(key))groups.set(key,[]);
+    groups.get(key).push(h);
+  }
+  const out=[];
+  for(const arr of groups.values()){
+    if(arr.length<2)continue;
+    const sorted=arr.slice().sort((a,b)=>a.time-b.time);
+    let dup=false;
+    for(let i=1;i<sorted.length;i++){
+      if((sorted[i].time-sorted[i-1].time)<=windowDays*86400000){dup=true;break;}
+    }
+    if(!dup)continue;
+    out.push({room:sorted[0].roomKey,dept:sorted[0].dept,level:sorted[0].level,category:sorted[0].category,
+      desc:sorted[0].desc,dates:sorted.map(h=>h.time),count:sorted.length,
+      spanDays:Math.max(0,Math.round((sorted[sorted.length-1].time-sorted[0].time)/86400000))});
+  }
+  return out;
+}
+function distLevel(h){return LEVEL_ORDER.map(l=>({name:l,value:h.filter(x=>x.level===l).length})).filter(d=>d.value>0);}
+function distCat(h){return CAT_ORDER.map(c=>({name:c,value:h.filter(x=>x.category===c).length})).filter(d=>d.value>0);}
+function distDept(h){const m=new Map();h.forEach(x=>m.set(x.dept,(m.get(x.dept)||0)+1));return [...m.entries()].map(([name,value])=>({name,value})).sort((a,b)=>b.value-a.value);}
+function trendData(h){
+  if(!h.length)return {months:[],counts:[]};
+  const map=new Map();h.forEach(x=>{const k=monthKey(x.time);map.set(k,(map.get(k)||0)+1);});
+  const keys=[...map.keys()].sort();
+  const cur=new Date(keys[0]+'-01'),end=new Date(keys[keys.length-1]+'-01');
+  const months=[];
+  while(cur<=end){months.push(monthKey(cur));cur.setMonth(cur.getMonth()+1);}
+  return {months,counts:months.map(m=>map.get(m)||0)};
+}
+
+/* ================= 图表 ================= */
+const BASE_FONT='"Noto Sans SC","Microsoft YaHei",sans-serif';
+const TOOLTIP={backgroundColor:'#16233C',borderColor:'#22304B',textStyle:{color:'#E8EEF7',fontSize:12},confine:true};
+function chart(id,opt){
+  if(typeof echarts==='undefined'){return svgChart(id,opt);}
+  const dom=document.getElementById(id);
+  if(!dom)return null;
+  let inst=chartInstances[id];
+  if(inst&&inst.getDom()!==dom){inst.dispose();inst=null;}
+  if(!inst){inst=echarts.init(dom);chartInstances[id]=inst;}
+  inst.setOption(opt,true);
+  return inst;
+}
+function emptyChart(id,text){
+  const dom=document.getElementById(id);
+  if(!dom)return;
+  if(chartInstances[id]){chartInstances[id].dispose();delete chartInstances[id];}
+  dom.innerHTML='<div class="empty-box" style="height:100%;display:flex;align-items:center;justify-content:center;border:none;margin:0">'+text+'</div>';
+}
+/* ---- 离线兜底：纯 SVG 图表 ---- */
+function svgChart(id,opt){
+  const dom=document.getElementById(id);
+  if(!dom)return null;
+  dom.innerHTML='';
+  const s=opt&&opt.series&&opt.series[0];
+  if(!s){dom.innerHTML='<div class="empty-box" style="height:100%;display:flex;align-items:center;justify-content:center;border:none;margin:0">暂无数据</div>';return null;}
+  const W=360,H=210;
+  const svgEl=document.createElementNS(SVG_NS,'svg');
+  svgEl.setAttribute('viewBox','0 0 '+W+' '+H);
+  svgEl.setAttribute('width','100%');svgEl.setAttribute('height','100%');
+  svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
+  if(s.type==='pie')svgDrawPie(svgEl,opt,W,H);
+  else if(s.type==='bar')svgDrawBar(svgEl,opt,W,H);
+  else if(s.type==='line')svgDrawLine(svgEl,opt,W,H);
+  dom.appendChild(svgEl);
+  return null;
+}
+function svgDrawPie(svg,opt,W,H){
+  const data=opt.series[0].data||[],colors=opt.color||C_LEVELS;
+  const total=data.reduce((a,b)=>a+(b.value||0),0)||1;
+  const cx=108,cy=105,r=64,r0=42;
+  let ang=-Math.PI/2;
+  data.forEach((d,i)=>{
+    const a2=ang+(d.value/total)*Math.PI*2;
+    const large=(a2-ang)>Math.PI?1:0;
+    const x1=cx+r*Math.cos(ang),y1=cy+r*Math.sin(ang);
+    const x2=cx+r*Math.cos(a2),y2=cy+r*Math.sin(a2);
+    const x3=cx+r0*Math.cos(a2),y3=cy+r0*Math.sin(a2);
+    const x4=cx+r0*Math.cos(ang),y4=cy+r0*Math.sin(ang);
+    const p='M'+x1+' '+y1+' A'+r+' '+r+' 0 '+large+' 1 '+x2+' '+y2+' L'+x3+' '+y3+' A'+r0+' '+r0+' 0 '+large+' 0 '+x4+' '+y4+' Z';
+    const path=document.createElementNS(SVG_NS,'path');
+    path.setAttribute('d',p);path.setAttribute('fill',colors[i%colors.length]);
+    svg.appendChild(path);
+    ang=a2;
+  });
+  data.forEach((d,i)=>{
+    const pct=Math.round(d.value/total*100);
+    const c=document.createElementNS(SVG_NS,'circle');
+    c.setAttribute('cx',212);c.setAttribute('cy',34+i*27);c.setAttribute('r',5);c.setAttribute('fill',colors[i%colors.length]);
+    const t=document.createElementNS(SVG_NS,'text');
+    t.setAttribute('x',224);t.setAttribute('y',39+i*27);t.setAttribute('font-size',12);t.setAttribute('fill','#8CA0BF');
+    t.textContent=d.name+'  '+d.value+' 条 · '+pct+'%';
+    svg.appendChild(c);svg.appendChild(t);
+  });
+}
+function svgDrawBar(svg,opt,W,H){
+  const cats=(opt.yAxis&&opt.yAxis.data)||[],raw=opt.series[0].data||[];
+  const vals=raw.map(v=>typeof v==='object'&&v!=null?v.value:v);
+  const colors=opt.color||C_DPTS;
+  const max=Math.max(1,...vals);
+  const left=96,right=40,top=16,bottom=8;
+  const bw=Math.min(22,(H-top-bottom)/Math.max(1,cats.length));
+  cats.forEach((c,i)=>{
+    const y=top+i*bw+bw/2;
+    const t=document.createElementNS(SVG_NS,'text');
+    t.setAttribute('x',left-8);t.setAttribute('y',y+4);t.setAttribute('text-anchor','end');t.setAttribute('font-size',12);t.setAttribute('fill','#8CA0BF');
+    t.textContent=c;svg.appendChild(t);
+    const w=(vals[i]/max)*(W-left-right);
+    const rect=document.createElementNS(SVG_NS,'rect');
+    rect.setAttribute('x',left);rect.setAttribute('y',y-bw/2+3);rect.setAttribute('width',Math.max(2,w));rect.setAttribute('height',bw-6);rect.setAttribute('rx',3);
+    rect.setAttribute('fill',colors[i%colors.length]);
+    const v=document.createElementNS(SVG_NS,'text');
+    v.setAttribute('x',left+w+5);v.setAttribute('y',y+4);v.setAttribute('font-size',11);v.setAttribute('fill','#E8EEF7');
+    v.textContent=vals[i];
+    svg.appendChild(rect);svg.appendChild(v);
+  });
+}
+function svgDrawLine(svg,opt,W,H){
+  const months=(opt.xAxis&&opt.xAxis.data)||[],vals=opt.series[0].data||[];
+  const L=46,R=16,T=16,B=24;
+  const max=Math.max(1,...vals);
+  const iw=W-L-R,ih=H-T-B;
+  const x=i=>L+iw*(months.length===1?0.5:i/(Math.max(1,months.length-1)));
+  const y=v=>T+ih-(v/max)*ih;
+  for(let g=0;g<=3;g++){
+    const gy=T+ih*g/3;
+    const line=document.createElementNS(SVG_NS,'line');
+    line.setAttribute('x1',L);line.setAttribute('y1',gy);line.setAttribute('x2',W-R);line.setAttribute('y2',gy);
+    line.setAttribute('stroke','rgba(34,48,75,.6)');line.setAttribute('stroke-width',1);
+    svg.appendChild(line);
+  }
+  months.forEach((m,i)=>{
+    const t=document.createElementNS(SVG_NS,'text');
+    t.setAttribute('x',x(i));t.setAttribute('y',H-7);t.setAttribute('text-anchor','middle');t.setAttribute('font-size',10.5);t.setAttribute('fill','#8CA0BF');
+    t.textContent=m;svg.appendChild(t);
+  });
+  const pts=months.map((m,i)=>x(i)+','+y(vals[i])).join(' ');
+  const area=document.createElementNS(SVG_NS,'polygon');
+  area.setAttribute('points',L+','+(T+ih)+' '+pts+' '+(W-R)+','+(T+ih));
+  area.setAttribute('fill','rgba(245,158,11,.18)');
+  const line=document.createElementNS(SVG_NS,'polyline');
+  line.setAttribute('points',pts);line.setAttribute('fill','none');line.setAttribute('stroke','#F59E0B');
+  line.setAttribute('stroke-width',2.5);line.setAttribute('stroke-linejoin','round');line.setAttribute('stroke-linecap','round');
+  svg.appendChild(area);svg.appendChild(line);
+  vals.forEach((v,i)=>{
+    const c=document.createElementNS(SVG_NS,'circle');
+    c.setAttribute('cx',x(i));c.setAttribute('cy',y(v));c.setAttribute('r',3.5);c.setAttribute('fill','#F59E0B');
+    svg.appendChild(c);
+  });
+}
+function pieOpt(items,colors){
+  const data=items.map((v,i)=>({name:v.name,value:v.value,itemStyle:{color:colors[i%colors.length]}}));
+  return {backgroundColor:'transparent',color:colors,textStyle:{fontFamily:BASE_FONT},
+    tooltip:Object.assign({},TOOLTIP,{trigger:'item',formatter:p=>p.name+'<br>'+p.value+' 条 · '+(p.percent!=null?p.percent.toFixed(1):'')+'%'}),
+    legend:{orient:'vertical',right:2,top:'middle',itemWidth:10,itemHeight:10,itemGap:8,icon:'circle',textStyle:{color:'#8CA0BF',fontSize:11.5}},
+    series:[{type:'pie',radius:['42%','68%'],center:['34%','52%'],avoidLabelOverlap:true,
+      label:{show:true,formatter:'{c}',color:'#E8EEF7',fontSize:11},
+      labelLine:{length:8,length2:5,lineStyle:{color:'#3A4B6E'}},
+      itemStyle:{borderColor:'#111C31',borderWidth:2},
+      emphasis:{scaleSize:4},
+      data}]};
+}
+function barHOpt(cats,vals,colors){
+  return {backgroundColor:'transparent',textStyle:{fontFamily:BASE_FONT},
+    tooltip:Object.assign({},TOOLTIP,{trigger:'axis',axisPointer:{type:'shadow'}}),
+    grid:{left:8,right:38,top:6,bottom:2,containLabel:true},
+    xAxis:{type:'value',splitLine:{lineStyle:{color:'rgba(34,48,75,.6)'}},axisLabel:{color:'#5B6B8C',fontSize:10.5}},
+    yAxis:{type:'category',data:cats,axisLine:{lineStyle:{color:'#22304B'}},axisTick:{show:false},axisLabel:{color:'#8CA0BF',fontSize:11.5}},
+    series:[{type:'bar',barWidth:'58%',data:vals.map((v,i)=>({value:v,itemStyle:{color:colors[i%colors.length],borderRadius:[0,4,4,0]}})),
+      label:{show:true,position:'right',color:'#E8EEF7',fontSize:10.5,formatter:p=>p.value}}]};
+}
+function lineOpt(months,counts){
+  return {backgroundColor:'transparent',textStyle:{fontFamily:BASE_FONT},
+    tooltip:Object.assign({},TOOLTIP,{trigger:'axis'}),
+    grid:{left:8,right:20,top:24,bottom:4,containLabel:true},
+    xAxis:{type:'category',boundaryGap:false,data:months,axisLine:{lineStyle:{color:'#22304B'}},axisTick:{show:false},axisLabel:{color:'#8CA0BF',fontSize:11}},
+    yAxis:{type:'value',minInterval:1,splitLine:{lineStyle:{color:'rgba(34,48,75,.6)'}},axisLabel:{color:'#5B6B8C',fontSize:10.5}},
+    series:[{type:'line',data:counts,smooth:true,symbol:'circle',symbolSize:6,
+      lineStyle:{width:2.5,color:'#F59E0B'},
+      itemStyle:{color:'#F59E0B',borderColor:'#111C31',borderWidth:2},
+      areaStyle:{color:(typeof echarts!=='undefined'&&echarts.graphic)?new echarts.graphic.LinearGradient(0,0,0,1,[{offset:0,color:'rgba(245,158,11,.32)'},{offset:1,color:'rgba(245,158,11,.02)'}]):'rgba(245,158,11,.22)'},
+      markLine:{silent:true,symbol:'none',lineStyle:{color:'rgba(139,160,191,.4)',type:'dashed'},label:{color:'#5B6B8C',fontSize:10},data:[{type:'average',name:'月均'}]}}]};
+}
+
+/* ================= 渲染：总览 ================= */
+function renderAll(){
+  updateFilterOptions();
+  renderStepper();
+  renderKpis();
+  renderLayout();
+  renderSide();
+  renderTable();
+}
+function renderStepper(){
+  const s1=!!state.layoutImage,s2=state.rooms.length>0,s3=state.hazards.length>0;
+  const frontier=s3?4:(s2?3:(s1?2:1));
+  document.querySelectorAll('#stepper .step').forEach(li=>{
+    const n=+li.dataset.step;
+    li.className='step'+( (n===1&&s1)||(n===2&&s2)||(n===3&&s3)||n===4&&s3 ?' done':'')+(n===frontier?' active':'');
+  });
+}
+function renderKpis(){
+  const fh=getFilteredHazards();
+  const dups=findDuplicates(fh,state.dupWindow);
+  const roomsWith=new Set(fh.filter(h=>h.roomMatched).map(h=>h.roomKey));
+  $('#kTotal').textContent=fh.length;
+  $('#kTotalSub').textContent=state.hazards.length?('筛选后 '+fh.length+' / 共 '+state.hazards.length+' 条'):'未导入数据';
+  $('#kL1').textContent=fh.filter(h=>h.level==='一类隐患').length;
+  $('#kL2').textContent=fh.filter(h=>h.level==='二类隐患').length;
+  $('#kL3').textContent=fh.filter(h=>h.level==='三类隐患').length;
+  $('#kDup').textContent=dups.length;
+  $('#kDupSub').textContent='窗口 '+state.dupWindow+' 天内重复出现';
+  $('#kRooms').textContent=roomsWith.size;
+  $('#kRoomsSub').textContent='共 '+state.rooms.length+' 个已划分房间';
+}
+function renderOverview(){
+  const fh=getFilteredHazards();
+  $('#tabbody').innerHTML=
+    '<h3>月度发现趋势</h3><div id="chTrend" class="chart tall"></div>'
+    +'<div class="grid2"><div><h3>隐患等级分布</h3><div id="chLev" class="chart"></div></div>'
+    +'<div><h3>隐患类别分布</h3><div id="chCat" class="chart"></div></div></div>'
+    +'<h3>责任部门分布</h3><div id="chDept" class="chart tall"></div>';
+  if(!fh.length){
+    emptyChart('chTrend','当前范围内暂无数据，请先导入隐患数据');
+    emptyChart('chLev','暂无数据');
+    emptyChart('chCat','暂无数据');
+    emptyChart('chDept','暂无数据');
+    return;
+  }
+  const tr=trendData(fh);
+  chart('chTrend',lineOpt(tr.months,tr.counts));
+  chart('chLev',pieOpt(distLevel(fh),C_LEVELS));
+  chart('chCat',barHOpt(distCat(fh).map(d=>d.name),distCat(fh).map(d=>d.value),C_CATS));
+  const dd=distDept(fh);
+  chart('chDept',barHOpt(dd.map(d=>d.name),dd.map(d=>d.value),C_DPTS));
+}
+function dupCards(dups){
+  if(!dups.length)return '<div class="empty-box">窗口 '+state.dupWindow+' 天内没有重复隐患<br><span style="font-size:11.5px">重复判定：相同房间 + 相同责任部门 + 相同隐患描述</span></div>';
+  return dups.map((g,i)=>'<div class="dup-card" data-i="'+i+'">'
+    +'<div class="top"><span class="room-tag">'+esc(g.room)+'</span><span class="dept">'+esc(g.dept)+'</span>'
+    +'<span class="badge l'+({ '一类隐患':'1','二类隐患':'2','三类隐患':'3' }[g.level]||'3')+'">'+esc(g.level)+'</span>'
+    +'<span style="margin-left:auto;color:var(--faint);font-size:11.5px">'+g.count+' 次</span></div>'
+    +'<div class="desc">'+esc(g.desc)+'</div>'
+    +'<div class="dates">'+g.dates.map(d=>'<span>'+fmtDate(d)+'</span>').join('')+'</div>'
+    +'<div class="meta"><span>跨度 '+g.spanDays+' 天</span><span>类别：'+esc(g.category)+'</span></div></div>').join('');
+}
+function hazardCards(list){
+  const lvCls={'一类隐患':'l1','二类隐患':'l2','三类隐患':'l3','未分级':'l3'};
+  const cap=h=>esc(h.room+' · '+h.desc);
+  return list.map((h,i)=>{
+    const thumbs=(h.photos&&h.photos.length)?h.photos.map(p=>'<img src="'+p.src+'" data-cap="'+cap(h)+'" title="'+esc(p.label)+'">').join(''):'';
+    const rectThumbs=(h.rectPhotos&&h.rectPhotos.length)?h.rectPhotos.map(p=>'<img src="'+p.src+'" data-cap="'+esc(h.room+' · 整改照片 · '+(h.rectNote||''))+'" title="'+esc(p.label)+'">').join(''):'';
+    const cCls=h.closed==='已闭环'?'c-ok':(h.closed==='整改中'?'c-do':'c-nd');
+    return '<div class="hazard-item">'
+      +'<div class="h-top"><span class="badge '+lvCls[h.level]+'">'+esc(h.level)+'</span>'
+      +'<span class="h-person" title="检查人">'+esc(h.person)+'</span>'
+      +'<span class="h-dept" title="整改责任部门">'+esc(h.dept)+'</span>'
+      +'<span class="h-rectp" title="整改人">'+(h.rectPerson?'整改人：'+esc(h.rectPerson):'<span style="color:var(--faint)">整改人：—</span>')+'</span>'
+      +'<button class="icon-btn rm-del" data-i="'+i+'" title="删除该隐患"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>'
+      +'<span class="h-date">'+fmtDate(h.time)+'</span></div>'
+      +'<div class="h-desc">'+esc(h.desc)+'</div>'
+      +'<div class="h-meta">'+esc(h.category)+'</div>'
+      +'<div class="h-photos">'+thumbs+'<button class="ph-up" data-i="'+i+'" title="为该隐患上传照片"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6 10 3.5h4L15.5 6"/></svg>照片</button></div>'
+      +'<div class="h-rect">'
+      +'<div class="h-rect-line"><span class="badge '+cCls+'">闭环：'+esc(h.closed||'未闭环')+'</span>'
+      +(h.rectNote?'<span class="rect-note">'+esc(h.rectNote)+'</span>':'')
+      +'<button class="icon-btn rect-edit" data-i="'+i+'" title="设置闭环情况"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>'
+      +'<button class="icon-btn rect-up" data-i="'+i+'" title="上传整改照片"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6 10 3.5h4L15.5 6"/></svg></button></div>'
+      +(rectThumbs?'<div class="h-photos">'+rectThumbs+'</div>':'')
+      +'<div class="rect-editor" style="display:none">'
+      +'<select class="rect-st"><option value=""'+(h.closed?'':' selected')+'>未闭环</option><option value="整改中"'+(h.closed==='整改中'?' selected':'')+'>整改中</option><option value="已闭环"'+(h.closed==='已闭环'?' selected':'')+'>已闭环</option></select>'
+      +'<input class="rect-note-input" placeholder="整改说明（选填）" value="'+esc(h.rectNote||'')+'">'
+      +'<input class="rect-person-input" placeholder="整改人（选填）" value="'+esc(h.rectPerson||'')+'">'
+      +'<button class="btn sm rect-save">保存</button></div>'
+      +'</div></div>';
+  }).join('')||'<div class="empty-box">该房间暂无隐患记录</div>';
+}
+function roomHeadHTML(room,fh,dups){
+  return '<div class="room-head"><span class="nm">'+esc(room.name)+'</span>'
+    +(dups.length?'<span class="dup-tag">重复隐患 '+dups.length+' 组</span>':'<span class="ok-tag">无重复隐患</span>')
+    +'<span style="margin-left:auto;color:var(--faint);font-size:12px">'+fh.length+' 条记录</span></div>'
+    +'<div class="chips">'
+    +'<span class="k">总数 <b>'+fh.length+'</b></span>'
+    +'<span class="k l1">一类 <b>'+fh.filter(h=>h.level==='一类隐患').length+'</b></span>'
+    +'<span class="k l2">二类 <b>'+fh.filter(h=>h.level==='二类隐患').length+'</b></span>'
+    +'<span class="k l3">三类 <b>'+fh.filter(h=>h.level==='三类隐患').length+'</b></span>'
+    +'<span class="k" style="border-color:var(--danger)">重复组 <b style="color:#FCA5A5">'+dups.length+'</b></span></div>';
+}
+function roomDetailHTML(room,fh,list,dups,p){
+  return roomHeadHTML(room,fh,dups)
+    +'<div class="grid2"><div><h3>隐患等级分布</h3><div id="'+p+'Lev" class="chart"></div></div>'
+    +'<div><h3>隐患类别分布</h3><div id="'+p+'Cat" class="chart"></div></div></div>'
+    +'<h3>责任部门分布</h3><div id="'+p+'Dept" class="chart tall"></div>'
+    +'<h3>窗口内重复隐患</h3><div id="'+p+'Dups">'+dupCards(dups)+'</div>'
+    +'<h3>隐患清单（'+list.length+'）</h3><div id="'+p+'List">'+hazardCards(list)+'</div>';
+}
+function wireRoomDetail(root,fh,list,dups,p){
+  if(!fh.length){
+    emptyChart(p+'Lev','该房间暂无数据');emptyChart(p+'Cat','该房间暂无数据');emptyChart(p+'Dept','该房间暂无数据');
+  }else{
+    chart(p+'Lev',pieOpt(distLevel(fh),C_LEVELS));
+    chart(p+'Cat',barHOpt(distCat(fh).map(d=>d.name),distCat(fh).map(d=>d.value),C_CATS));
+    const dd=distDept(fh);
+    chart(p+'Dept',barHOpt(dd.map(d=>d.name),dd.map(d=>d.value),C_DPTS));
+  }
+  root.querySelectorAll('#'+p+'Dups .dup-card').forEach(card=>{
+    card.onclick=()=>{const g=dups[+card.dataset.i];if(g){const r=state.rooms.find(x=>x.name===g.room);if(r)openRoomModal(r.id);}};
+  });
+  root.querySelectorAll('#'+p+'List .h-photos img').forEach(im=>{
+    im.onclick=e=>{e.stopPropagation();showLightbox(im.src,im.dataset.cap||'');};
+  });
+  root.querySelectorAll('#'+p+'List .ph-up').forEach(btn=>{
+    btn.onclick=()=>{const h=list[+btn.dataset.i];if(h){pendingPhotoHazard=h;$('#fileHazardPhoto').click();}};
+  });
+  root.querySelectorAll('#'+p+'List .rect-edit').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const ed=btn.closest('.hazard-item').querySelector('.rect-editor');
+      if(ed)ed.style.display=ed.style.display==='none'?'flex':'none';
+    };
+  });
+  root.querySelectorAll('#'+p+'List .rect-save').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const item=btn.closest('.hazard-item');
+      const i=+item.querySelector('.rect-edit').dataset.i;
+      const h=list[i];if(!h)return;
+      h.closed=item.querySelector('.rect-st').value;
+      h.rectNote=item.querySelector('.rect-note-input').value.trim();
+      h.rectPerson=item.querySelector('.rect-person-input').value.trim();
+      saveState();renderSide();
+      if(roomModalId)buildRoomModal();
+      toast('闭环情况已保存','ok');
+    };
+  });
+  root.querySelectorAll('#'+p+'List .rect-up').forEach(btn=>{
+    btn.onclick=e=>{
+      e.stopPropagation();
+      const h=list[+btn.dataset.i];
+      if(h){pendingRectHazard=h;$('#fileHazardRect').click();}
+    };
+  });
+  root.querySelectorAll('#'+p+'List .rm-del').forEach(btn=>{
+    btn.onclick=e=>{e.stopPropagation();const h=list[+btn.dataset.i];if(h)deleteHazard(h._id);};
+  });
+}
+function renderRoomDetail(){
+  const room=state.rooms.find(r=>r.id===state.selectedRoomId);
+  if(!room){
+    $('#tabbody').innerHTML='<div class="empty-box" style="padding:60px 14px">点击布局图中的<b style="color:var(--txt)">房间</b>，查看该区域的隐患等级 / 类别 / 责任部门分布与重复隐患</div>';
+    return;
+  }
+  const fh=getFilteredHazards().filter(h=>h.roomKey===room.name);
+  const list=fh.slice().sort((a,b)=>b.time-a.time);
+  const dups=findDuplicates(fh,state.dupWindow);
+  $('#tabbody').innerHTML=roomDetailHTML(room,fh,list,dups,'s');
+  wireRoomDetail($('#tabbody'),fh,list,dups,'s');
+}
+/* 房间弹窗（点击布局图房间弹出，便于查看） */
+let roomModalId=null;
+function openRoomModal(roomId){
+  const room=state.rooms.find(r=>r.id===roomId);
+  if(!room)return;
+  state.selectedRoomId=room.id;
+  roomModalId=room.id;
+  renderLayout();renderTabs();renderSide();
+  buildRoomModal();
+}
+function buildRoomModal(){
+  const room=state.rooms.find(r=>r.id===roomModalId);
+  if(!room){closeRoomModal();return;}
+  const fh=getFilteredHazards().filter(h=>h.roomKey===room.name);
+  const list=fh.slice().sort((a,b)=>b.time-a.time);
+  const dups=findDuplicates(fh,state.dupWindow);
+  let mask=document.getElementById('roomModalMask');
+  if(!mask){
+    mask=document.createElement('div');mask.id='roomModalMask';mask.className='room-modal';
+    mask.addEventListener('click',e=>{if(e.target===mask)closeRoomModal();});
+    document.body.appendChild(mask);
+  }
+  mask.innerHTML='<div class="rm-box">'
+    +'<div class="rm-hd"><h3>'+esc(room.name)+' 隐患详情</h3>'
+    +(dups.length?'<span class="dup-tag">重复隐患 '+dups.length+' 组</span>':'<span class="ok-tag">无重复隐患</span>')
+    +'<span class="sub">'+fh.length+' 条记录 · 重复窗口 '+state.dupWindow+' 天 · 照片点击可放大</span>'
+    +'<span class="spacer"></span>'
+    +'<button class="rm-close" title="关闭（Esc）"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg></button></div>'
+    +'<div class="rm-bd">'+roomDetailHTML(room,fh,list,dups,'m')+'</div></div>';
+  mask.querySelector('.rm-close').onclick=closeRoomModal;
+  wireRoomDetail(mask,fh,list,dups,'m');
+}
+function closeRoomModal(){
+  const m=document.getElementById('roomModalMask');
+  if(m)m.remove();
+  roomModalId=null;
+  ['mLev','mCat','mDept'].forEach(id=>{if(chartInstances[id]){chartInstances[id].dispose();delete chartInstances[id];}});
+}
+/* 删除单条隐患 */
+function deleteHazard(id){
+  const idx=state.hazards.findIndex(h=>h._id===id);
+  if(idx<0)return;
+  if(!confirm('确定删除这条隐患记录？删除后不可恢复'))return;
+  state.hazards.splice(idx,1);
+  saveState();renderAll();
+  if(roomModalId)buildRoomModal();
+  toast('隐患记录已删除','ok');
+}
+function renderDupTab(){
+  const dups=findDuplicates(getFilteredHazards(),state.dupWindow);
+  $('#tabbody').innerHTML=
+    '<h3>一月内重复隐患（同房间 · 同部门 · 同描述）</h3>'
+    +'<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px"><button class="btn sm" id="btnPushDup"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>微信推送提醒</button>'
+    +'<span style="font-size:12px;color:var(--faint)">共 '+dups.length+' 组，涉及房间 '+new Set(dups.map(d=>d.room)).size+' 个；已按窗口 '+state.dupWindow+' 天判定并在地图上标红</span></div>'
+    +'<div id="dupList">'+dupCards(dups)+'</div>';
+  const body=$('#tabbody');
+  const pushBtn=body.querySelector('#btnPushDup');
+  if(pushBtn)pushBtn.onclick=()=>pushRepeatReport(false);
+  if(dups.length){
+    body.querySelectorAll('.dup-card').forEach(card=>{
+      card.onclick=()=>{
+        const g=dups[+card.dataset.i];
+        const room=state.rooms.find(r=>r.name===g.room);
+        if(room)openRoomModal(room.id);
+        else toast('该记录的房间「'+g.room+'」未在布局图中划分，无法定位','err');
+      };
+    });
+  }
+}
+function renderRoomsTab(){
+  const fh=getFilteredHazards();
+  const dups=findDuplicates(fh,state.dupWindow);
+  const dupRooms=new Map();
+  for(const g of dups)dupRooms.set(norm(g.room),(dupRooms.get(norm(g.room))||0)+1);
+  const items=state.rooms.map(r=>{
+    const n=fh.filter(h=>h.roomKey===r.name).length;
+    const dc=dupRooms.get(norm(r.name))||0;
+    return '<div class="room-list-item'+(r.id===state.selectedRoomId?' selected':'')+'" data-id="'+r.id+'">'
+      +'<span class="sq" style="background:'+(dc>0&&state.highlightDup? 'var(--danger)':'var(--ok)')+'"></span>'
+      +'<span class="nm">'+esc(r.name)+'</span>'
+      +'<span class="n">'+n+' 条'+(dc?' · '+dc+'组重复':'')+'</span>'
+      +'<span class="act"><button class="icon-btn" data-act="ren" title="重命名"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg></button>'
+      +'<button class="icon-btn" data-act="del" title="删除"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></span></div>';
+  }).join('')||'<div class="empty-box">尚未划分房间，请先在布局图上拖拽圈出房间</div>';
+  $('#tabbody').innerHTML='<h3>房间清单（'+state.rooms.length+'）</h3><div style="font-size:12px;color:var(--faint);margin-bottom:8px">点击房间查看详情；可重命名或删除</div><div id="roomList">'+items+'</div>';
+  const body=$('#tabbody');
+  body.querySelectorAll('.room-list-item').forEach(item=>{
+    const room=state.rooms.find(r=>r.id===item.dataset.id);
+    item.onclick=e=>{
+      const act=e.target.closest('[data-act]');
+      if(act){
+        e.stopPropagation();
+        if(act.dataset.act==='ren'){
+          openNameEditor(room.id,act);
+        }else if(act.dataset.act==='del'){
+          if(confirm('删除房间「'+room.name+'」？（不影响已导入的隐患数据）')){
+            state.rooms=state.rooms.filter(r=>r.id!==room.id);
+            if(state.selectedRoomId===room.id)state.selectedRoomId=null;
+            saveState();renderLayout();renderRoomsTab();renderSide();toast('房间已删除');
+          }
+        }
+        return;
+      }
+      openRoomModal(room.id);
+    };
+  });
+}
+function renderSide(){
+  $('#dupCnt').textContent=findDuplicates(getFilteredHazards(),state.dupWindow).length;
+  $('#roomCnt').textContent=state.rooms.length;
+  if(state.tab==='overview')renderOverview();
+  else if(state.tab==='room')renderRoomDetail();
+  else if(state.tab==='dup')renderDupTab();
+  else renderRoomsTab();
+}
+function renderTabs(){
+  document.querySelectorAll('#tabs .tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===state.tab));
+}
+
+/* ================= 渲染：表格 ================= */
+function renderTable(){
+  const fh=getFilteredHazards().slice().sort((a,b)=>b.time-a.time);
+  const q=norm(state.search);
+  const rows=q?fh.filter(h=>norm(h.desc).includes(q)||norm(h.room).includes(q)||norm(h.dept).includes(q)):fh;
+  const dups=findDuplicates(getFilteredHazards(),state.dupWindow);
+  const dupKeys=new Set(dups.map(g=>norm(g.room)+'||'+norm(g.dept)+'||'+norm(g.desc)));
+  const lvCls={'一类隐患':'l1','二类隐患':'l2','三类隐患':'l3','未分级':'l3'};
+  $('#tableSub').textContent='共 '+rows.length+' 条'+(q?'（搜索）':'')+' / 全量 '+state.hazards.length+' 条';
+  const body=$('#tableBody');
+  if(!rows.length){
+    body.innerHTML='<tr><td colspan="12" style="text-align:center;color:var(--faint);padding:34px 0">'+(state.hazards.length?'当前筛选范围内没有数据，请调整筛选条件':'尚未录入隐患数据，点击「新增隐患」直接录入，或「导入隐患数据」批量导入 /「加载示例」')+'</td></tr>';
+    return;
+  }
+  body.innerHTML=rows.map(h=>{
+    const isDup=dupKeys.has(norm(h.roomKey)+'||'+norm(h.dept)+'||'+norm(h.desc));
+    const dupCount=isDup?dups.find(g=>norm(g.room)+'||'+norm(g.dept)+'||'+norm(g.desc)===norm(h.roomKey)+'||'+norm(h.dept)+'||'+norm(h.desc)).count:0;
+    const ph=(h.photos&&h.photos.length)?h.photos[0]:null;
+    return '<tr data-room="'+esc(h.roomKey)+'" data-hid="'+h._id+'">'
+      +'<td style="font-variant-numeric:tabular-nums">'+fmtDate(h.time)+'</td>'
+      +'<td>'+(h.roomMatched?'<span class="badge room">'+esc(h.room)+'</span>':'<span class="badge unmatched" title="未在布局图中匹配到该房间">'+esc(h.room)+' ?</span>')+'</td>'
+      +'<td><span class="badge '+lvCls[h.level]+'">'+esc(h.level)+'</span></td>'
+      +'<td>'+esc(h.category)+'</td>'
+      +'<td>'+(isDup?'<span class="badge dup">重复 ×'+dupCount+'</span>':'<span style="color:var(--faint)">—</span>')+'</td>'
+      +'<td title="检查人">'+esc(h.person)+'</td>'
+      +'<td title="整改责任部门">'+esc(h.dept)+'</td>'
+      +'<td title="整改人">'+(h.rectPerson?esc(h.rectPerson):'<span style="color:var(--faint)">—</span>')+'</td>'
+      +'<td>'+(ph?'<img class="tph" src="'+ph.src+'" data-cap="'+esc(h.room+' · '+h.desc)+'" title="'+esc(ph.label)+'">':'<span style="color:var(--faint)">—</span>')+'</td>'
+      +'<td><span class="badge '+(h.closed==='已闭环'?'c-ok':(h.closed==='整改中'?'c-do':'c-nd'))+'">'+esc(h.closed||'未闭环')+'</span>'
+      +((h.rectPhotos&&h.rectPhotos.length)?'<div style="font-size:11px;color:var(--faint);margin-top:3px">整改照片 '+h.rectPhotos.length+' 张</div>':'')+'</td>'
+      +'<td class="desc-cell" title="'+esc(h.desc)+'">'+esc(h.desc)+'</td>'
+      +'<td><div style="display:flex;gap:4px"><button class="icon-btn" data-loc="1" title="弹出该房间详情"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></button>'
+      +'<button class="icon-btn rm-del" data-del="1" title="删除该隐患"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button></div></td></tr>';
+  }).join('');
+  body.querySelectorAll('tr').forEach(tr=>{
+    tr.onclick=e=>{
+      const tph=e.target.closest('.tph');
+      if(tph){e.stopPropagation();showLightbox(tph.src,tph.dataset.cap||'');return;}
+      const loc=e.target.closest('[data-loc]');
+      const del=e.target.closest('[data-del]');
+      const room=state.rooms.find(r=>r.name===tr.dataset.room);
+      if(del){deleteHazard(tr.dataset.hid);return;}
+      if(!room){toast('该记录的房间「'+tr.dataset.room+'」未在布局图中划分','err');return;}
+      if(loc){openRoomModal(room.id);return;}
+      state.selectedRoomId=room.id;state.tab='room';
+      renderTabs();renderLayout();renderSide();
+    };
+  });
+}
+
+/* ================= 照片灯箱 ================= */
+let lightbox=null;
+function showLightbox(src,caption){
+  closeLightbox();
+  lightbox=document.createElement('div');
+  lightbox.className='lightbox';
+  const box=document.createElement('div');box.className='lb-box';
+  const im=document.createElement('img');im.src=src;im.alt=caption||'隐患照片';
+  const cap=document.createElement('div');cap.className='lb-cap';cap.textContent=caption||'';
+  const close=document.createElement('button');close.className='lb-close';close.title='关闭';
+  close.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>';
+  box.appendChild(im);box.appendChild(cap);box.appendChild(close);
+  lightbox.appendChild(box);
+  close.onclick=closeLightbox;
+  lightbox.addEventListener('click',e=>{if(e.target===lightbox)closeLightbox();});
+  document.body.appendChild(lightbox);
+}
+function closeLightbox(){if(lightbox){lightbox.remove();lightbox=null;}}
+
+/* ================= 重复隐患提醒（Server酱 / 方糖） ================= */
+function openNotifyModal(){
+  closeRoomModal();closeLightbox();
+  let mask=document.getElementById('notifyModalMask');
+  if(mask){mask.style.display='flex';return;}
+  mask=el('div','modal-mask');
+  mask.id='notifyModalMask';
+  const n=state.notify||{sendkey:'',monthly:true,lastPush:''};
+  mask.innerHTML='<div class="modal" style="width:min(560px,100%)">'
+    +'<div class="modal-hd"><h3>重复隐患微信提醒（Server酱）</h3></div>'
+    +'<div class="modal-bd">'
+    +'<p style="font-size:13px;color:var(--muted);line-height:1.8;margin-bottom:10px">'
+    +'每月 <b style="color:var(--accent)">1 号</b>打开本页面时自动把「重复隐患 + 未闭环隐患」推送到微信（服务号「方糖」）。'
+    +'获取 SendKey：访问 <a href="https://sct.ftqq.com" target="_blank" rel="noopener" style="color:var(--accent)">sct.ftqq.com</a> 登录后复制「SendKey」。</p>'
+    +'<label class="lbl" style="display:block;margin-bottom:8px">SendKey'
+    +'<input type="password" id="nkSendkey" value="'+esc(n.sendkey)+'" placeholder="SCTxxxxx…" style="width:100%;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:8px 10px;font-size:13px;outline:none;margin-top:4px"></label>'
+    +'<label style="display:flex;align-items:center;gap:8px;margin-bottom:10px;cursor:pointer"><input type="checkbox" id="nkMonthly"'+(n.monthly?' checked':'')+'><span style="font-size:13px;color:var(--muted)">每月 1 号打开页面时自动推送</span></label>'
+    +'<div class="note" style="margin-top:0">推送内容：隐患总数、各等级数量、未闭环数量、重复隐患组明细（房间 / 部门 / 描述 / 出现次数）。'
+    +'推送需要联网；本页面为本地文件，采用图片信标方式发送，请以微信实际收到消息为准。</div>'
+    +'</div><div class="modal-ft"><button class="btn" id="nkTest">立即推送测试</button><span class="spacer"></span><button class="btn" id="nkCancel">关闭</button><button class="btn primary" id="nkSave">保存设置</button></div></div>';
+  $('#modalRoot').appendChild(mask);
+  mask.querySelector('#nkCancel').onclick=()=>mask.remove();
+  mask.querySelector('#nkSave').onclick=()=>{
+    state.notify.sendkey=mask.querySelector('#nkSendkey').value.trim();
+    state.notify.monthly=mask.querySelector('#nkMonthly').checked;
+    saveState();
+    mask.remove();
+    toast('提醒设置已保存','ok');
+  };
+  mask.querySelector('#nkTest').onclick=()=>{
+    const sk=mask.querySelector('#nkSendkey').value.trim();
+    if(!sk){toast('请先填写 SendKey','err');return;}
+    sendPush('【隐患提醒】测试推送','本消息来自工厂隐患数据分析台，说明 SendKey 配置正确。',sk,r=>{
+      toast(r==='ok'?'测试推送已发送，请查看微信':'已发起推送（微信未收到请检查 SendKey 与网络）',r==='ok'?'ok':'err');
+    });
+  };
+}
+function sendPush(title,desp,sk,cb){
+  const url='https://sctapi.ftqq.com/'+encodeURIComponent(sk)+'.send';
+  const body='title='+encodeURIComponent(title)+'&desp='+encodeURIComponent(desp);
+  const beacon=()=>{const im=new Image();im.src=url+'?'+body;cb('sent');};
+  try{
+    fetch(url,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body}).then(r=>r.json()).then(j=>{
+      if(j&&j.code===0)cb('ok');
+      else if(j&&(j.code===40001||j.code===40002))cb('badkey');
+      else cb('sent');
+    }).catch(()=>beacon());
+  }catch(err){beacon();}
+}
+function pushRepeatReport(silent){
+  const n=state.notify||{};
+  if(!n.sendkey){if(!silent)toast('请先点击「提醒设置」填写 Server酱 SendKey','err');return false;}
+  const fh=getFilteredHazards();
+  const dups=findDuplicates(fh,state.dupWindow);
+  const unclosed=fh.filter(h=>h.closed!=='已闭环');
+  const lines=dups.slice(0,15).map(g=>'- '+g.room+' / '+g.dept+'：'+(g.desc||'').slice(0,38)+'（'+g.count+' 次）');
+  const title='【隐患提醒】'+fh.length+' 条隐患，重复 '+dups.length+' 组';
+  const desp='数据时间：'+fmtDate(new Date())+'（窗口 '+state.dupWindow+' 天）\n\n'
+    +'隐患总数：'+fh.length+'（一类 '+fh.filter(h=>h.level==='一类隐患').length+' / 二类 '+fh.filter(h=>h.level==='二类隐患').length+' / 三类 '+fh.filter(h=>h.level==='三类隐患').length+'）\n'
+    +'未闭环：'+unclosed.length+' 条\n'
+    +'重复隐患组：'+dups.length+' 组\n\n'
+    +(lines.length?lines.join('\n'):'本月暂无重复隐患\n')
+    +'\n请在「工厂隐患数据分析台」查看详情并跟进整改。';
+  sendPush(title,desp,n.sendkey,r=>{
+    if(r==='badkey')toast('SendKey 无效，请检查（sct.ftqq.com）','err');
+    else if(!silent)toast(r==='ok'?'已推送至微信':'已发起推送（以微信收到为准）',r==='ok'?'ok':'err');
+  });
+  return true;
+}
+
+/* ================= 清空（分项） ================= */
+function openClearModal(){
+  closeRoomModal();closeLightbox();
+  let mask=document.getElementById('clearModalMask');
+  if(mask){mask.style.display='flex';return;}
+  mask=el('div','modal-mask');
+  mask.id='clearModalMask';
+  const hasLayout=!!state.layoutImage,hasRooms=state.rooms.length>0,hasHazards=state.hazards.length>0,hasPhotos=Object.keys(state.attachments).length>0;
+  mask.innerHTML='<div class="modal" style="width:min(520px,100%)">'
+    +'<div class="modal-hd"><h3>分项清空数据</h3></div>'
+    +'<div class="modal-bd">'
+    +'<p style="font-size:13px;color:var(--muted);margin-bottom:10px">按需勾选要清空的内容（可多选），未勾选的保持不变：</p>'
+    +'<label style="display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer"><input type="checkbox" id="clLayout"'+(hasLayout?'':' disabled')+'><span style="font-size:13.5px"><b>工厂布局图</b><span style="color:var(--faint);font-size:12px;margin-left:6px">将同时清空房间划分</span></span></label>'
+    +'<label style="display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer;border-top:1px dashed rgba(34,48,75,.6)"><input type="checkbox" id="clRooms"'+(hasRooms?'':' disabled')+'><span style="font-size:13.5px"><b>房间划分</b><span style="color:var(--faint);font-size:12px;margin-left:6px">保留布局图，隐患数据的房间匹配将失效</span></span></label>'
+    +'<label style="display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer;border-top:1px dashed rgba(34,48,75,.6)"><input type="checkbox" id="clHazards"'+(hasHazards?'':' disabled')+'><span style="font-size:13.5px"><b>隐患数据</b><span style="color:var(--faint);font-size:12px;margin-left:6px">保留布局图与房间</span></span></label>'
+    +'<label style="display:flex;align-items:center;gap:9px;padding:8px 0;cursor:pointer;border-top:1px dashed rgba(34,48,75,.6)"><input type="checkbox" id="clPhotos"'+(hasPhotos||hasHazards?'':' disabled')+'><span style="font-size:13.5px"><b>照片附件</b><span style="color:var(--faint);font-size:12px;margin-left:6px">连同各隐患已关联的照片一并清除</span></span></label>'
+    +'<div class="note" style="margin-top:10px">清空操作不可恢复；未勾选的类型保留原数据。</div>'
+    +'</div><div class="modal-ft"><button class="btn" id="clCancel">取消</button><button class="btn" id="clOk" style="color:#fff;background:rgba(239,68,68,.75);border-color:var(--danger)">确认清空所选</button></div></div>';
+  $('#modalRoot').appendChild(mask);
+  mask.querySelector('#clCancel').onclick=()=>mask.remove();
+  mask.querySelector('#clOk').onclick=()=>{
+    const c={layout:mask.querySelector('#clLayout').checked,
+      rooms:mask.querySelector('#clRooms').checked,
+      hazards:mask.querySelector('#clHazards').checked,
+      photos:mask.querySelector('#clPhotos').checked};
+    if(!c.layout&&!c.rooms&&!c.hazards&&!c.photos){toast('请至少勾选一项要清空的内容','err');return;}
+    if(c.layout){
+      state.layoutImage=null;state.naturalW=0;state.naturalH=0;state.rooms=[];state.selectedRoomId=null;
+      img.removeAttribute('src');img.style.display='none';svg.style.display='none';svg.innerHTML='';
+      $('#stageEmpty').style.display='flex';
+      $('#layoutSub').textContent='未导入布局图';
+      $('#stageHint').style.display='none';
+    }else if(c.rooms){
+      state.rooms=[];state.selectedRoomId=null;
+      $('#layoutSub').textContent=(state.naturalW||1600)+' × '+(state.naturalH||1000)+' · 0 个房间';
+      updateStageHint();
+    }
+    if(c.hazards)state.hazards=[];
+    if(c.photos){
+      state.attachments={};
+      state.hazards.forEach(h=>{h.photos=[];h.rectPhotos=[];});
+    }
+    mask.remove();
+    saveState();renderAll();
+    const msg=[c.layout&&'工厂布局图',c.rooms&&'房间划分',c.hazards&&'隐患数据',c.photos&&'照片附件'].filter(Boolean).join('、');
+    toast('已清空：'+msg,'ok');
+  };
+}
+
+/* ================= 隐患导出 ================= */
+function exportHazards(){
+  const fh=getFilteredHazards().slice().sort((a,b)=>b.time-a.time);
+  const q=norm(state.search);
+  const rows=q?fh.filter(h=>norm(h.desc).includes(q)||norm(h.room).includes(q)||norm(h.dept).includes(q)):fh;
+  if(!rows.length){toast('当前筛选范围内没有可导出的数据','err');return;}
+  const dups=findDuplicates(getFilteredHazards(),state.dupWindow);
+  const dupKeys=new Set(dups.map(g=>norm(g.room)+'||'+norm(g.dept)+'||'+norm(g.desc)));
+  const header=['发现时间','房间位置','整改责任部门','隐患等级','隐患类别','重复标记','检查人','整改人','隐患照片','闭环情况','整改说明','整改照片','隐患描述'];
+  const data=[header].concat(rows.map(h=>{
+    const isDup=dupKeys.has(norm(h.roomKey)+'||'+norm(h.dept)+'||'+norm(h.desc));
+    return [fmtDate(h.time),h.room,h.dept,h.level,h.category,(isDup?'重复':'否'),h.person,h.rectPerson||'',h.photoRaw||'',h.closed||'未闭环',h.rectNote||'',h.rectRaw||'',h.desc];
+  }));
+  const stamp=fmtDate(new Date()).replace(/-/g,'');
+  if(typeof XLSX!=='undefined'){
+    const ws=XLSX.utils.aoa_to_sheet(data);
+    ws['!cols']=[{wch:12},{wch:12},{wch:12},{wch:10},{wch:12},{wch:8},{wch:10},{wch:10},{wch:14},{wch:10},{wch:20},{wch:14},{wch:46}];
+    const wb=XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb,ws,'隐患导出');
+    XLSX.writeFile(wb,'隐患数据导出_'+stamp+'.xlsx');
+    toast('已导出 '+rows.length+' 条为 Excel','ok');
+    return;
+  }
+  const csv=data.map(r=>r.map(c=>'"'+String(c==null?'':c).replace(/"/g,'""')+'"').join(',')).join('\r\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);a.download='隐患数据导出_'+stamp+'.csv';
+  document.body.appendChild(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  toast('已导出 '+rows.length+' 条为 CSV（当前无网络，Excel 库不可用）','ok');
+}
+
+/* ================= 新增隐患（页面直接录入） ================= */
+let addPhotosArr=[],addRectArr=[];
+function openAddHazardModal(){
+  closeRoomModal();closeLightbox();
+  addPhotosArr=[];addRectArr=[];
+  let mask=document.getElementById('addHazardMask');
+  if(mask){mask.style.display='flex';return;}
+  mask=el('div','modal-mask');
+  mask.id='addHazardMask';
+  const rooms=state.rooms.map(r=>r.name);
+  const depts=[...new Set(state.hazards.map(h=>h.dept))].filter(Boolean);
+  const today=fmtDate(new Date());
+  const roomOpts=rooms.length?'<datalist id="ahRoomList">'+rooms.map(r=>'<option value="'+esc(r)+'">').join('')+'</datalist>':'';
+  const deptOpts='<datalist id="ahDeptList">'+depts.map(d=>'<option value="'+esc(d)+'">').join('')+'</datalist>';
+  mask.innerHTML='<div class="modal" style="width:min(720px,100%)">'
+    +'<div class="modal-hd"><h3>新增隐患</h3><span style="font-size:12px;color:var(--faint)">直接在页面录入一条隐患，保存后立即参与统计与重复判定</span></div>'
+    +'<div class="modal-bd">'
+    +'<div class="form-grid">'
+    +'<div class="form-item"><label>发现时间 *</label><input type="date" id="ahTime" value="'+today+'"></div>'
+    +'<div class="form-item"><label>房间位置 *</label><input id="ahRoom" list="ahRoomList" placeholder="选择或输入房间名称">'+roomOpts+'</div>'
+    +'<div class="form-item"><label>整改责任部门</label><input id="ahDept" list="ahDeptList" placeholder="如：生产部">'+deptOpts+'</div>'
+    +'<div class="form-item"><label>检查人</label><input id="ahPerson" placeholder="如：王强"></div>'
+    +'<div class="form-item"><label>整改人</label><input id="ahRectPerson" placeholder="如：陈刚"></div>'
+    +'<div class="form-item"><label>隐患等级</label><select id="ahLevel"><option>一类隐患</option><option>二类隐患</option><option>三类隐患</option></select></div>'
+    +'<div class="form-item"><label>隐患类别</label><select id="ahCat"><option>电气安全</option><option>设备安全</option><option>化学品安全</option><option>消防安全</option><option>劳保用品安全</option><option>文件管理</option><option>其他安全</option></select></div>'
+    +'<div class="form-item"><label>闭环情况</label><select id="ahClosed"><option value="">未闭环</option><option>整改中</option><option>已闭环</option></select></div>'
+    +'<div class="form-item"><label>整改说明</label><input id="ahRectNote" placeholder="选填"></div>'
+    +'<div class="form-item full"><label>隐患描述 *</label><textarea id="ahDesc" rows="2" placeholder="描述隐患内容…"></textarea></div>'
+    +'<div class="form-item full"><label>隐患照片（可多选，选填）</label><input type="file" id="ahPhoto" accept="image/*" multiple><div class="ah-thumbs" id="ahPhotoThumbs"></div></div>'
+    +'<div class="form-item full"><label>整改照片（可多选，选填）</label><input type="file" id="ahRect" accept="image/*" multiple><div class="ah-thumbs" id="ahRectThumbs"></div></div>'
+    +'</div>'
+    +'<div class="note" style="margin-top:10px">房间位置若未匹配到布局图中的房间，将按「未匹配」标记显示，可在布局图划分/命名对应房间后自动关联。</div>'
+    +'</div><div class="modal-ft"><button class="btn" id="ahCancel">取消</button><button class="btn primary" id="ahOk">保存隐患</button></div></div>';
+  $('#modalRoot').appendChild(mask);
+  const bindFiles=(inpId,thumbsId,cb)=>{
+    mask.querySelector('#'+inpId).addEventListener('change',e=>{
+      const files=[...e.target.files];
+      const arr=[];let done=0;
+      files.forEach(f=>readImageFile(f,url=>{
+        if(url)arr.push({src:url,label:f.name});
+        done++;
+        if(done===files.length){
+          cb(arr);
+          const box=mask.querySelector('#'+thumbsId);
+          box.innerHTML=arr.map(p=>'<img src="'+p.src+'" title="'+esc(p.label)+'">').join('');
+        }
+      }));
+    });
+  };
+  bindFiles('ahPhoto','ahPhotoThumbs',a=>{addPhotosArr=a;});
+  bindFiles('ahRect','ahRectThumbs',a=>{addRectArr=a;});
+  mask.querySelector('#ahCancel').onclick=()=>mask.remove();
+  mask.querySelector('#ahOk').onclick=()=>{
+    const roomRaw=mask.querySelector('#ahRoom').value.trim();
+    const timeStr=mask.querySelector('#ahTime').value;
+    const desc=mask.querySelector('#ahDesc').value.trim();
+    if(!roomRaw){toast('请填写房间位置','err');return;}
+    if(!timeStr){toast('请选择发现时间','err');return;}
+    if(!desc){toast('请填写隐患描述','err');return;}
+    const matchedRoom=matchRoom(roomRaw);
+    const h={_id:uid(),
+      dept:mask.querySelector('#ahDept').value.trim()||'未填写',
+      level:mask.querySelector('#ahLevel').value,
+      category:mask.querySelector('#ahCat').value,
+      time:new Date(timeStr+'T00:00:00'),
+      room:roomRaw,desc:desc,
+      person:mask.querySelector('#ahPerson').value.trim()||'未填写',
+      rectPerson:mask.querySelector('#ahRectPerson').value.trim(),
+      photoRaw:'',photos:addPhotosArr.slice(),
+      closed:mask.querySelector('#ahClosed').value,
+      rectNote:mask.querySelector('#ahRectNote').value.trim(),
+      rectRaw:'',rectPhotos:addRectArr.slice(),
+      roomKey:matchedRoom||roomRaw,roomMatched:!!matchedRoom};
+    state.hazards.push(h);
+    saveState();mask.remove();renderAll();
+    toast('已新增隐患：'+roomRaw+' · '+h.level+(matchedRoom?'':'（房间未匹配）'),'ok');
+  };
+}
+
+/* ================= 事件绑定 ================= */
+let pendingPhotoHazard=null;
+let pendingRectHazard=null;
+function updateStageHint(){
+  const hint=$('#stageHint');
+  if(!state.layoutImage)return;
+  hint.style.display='flex';
+  if(state.drawMode)hint.innerHTML='<b style="color:var(--accent)">划分房间模式</b>：在空白处按住拖拽圈出房间，松开后命名；已画好的房间可直接<b>按住拖动</b>调整位置，选中后拖<b>右下角方块</b>可缩放；再次点击「划分房间」退出';
+  else if(state.rooms.length===0)hint.innerHTML='点击工具栏「<b>划分房间</b>」后，在布局图上按住鼠标拖拽，圈出每个房间并命名';
+  else hint.innerHTML='点击房间弹出隐患清单（可放大照片、删除记录）；<b style="color:#FCA5A5">红色房间</b>为窗口期内存在重复隐患；重命名请在右侧「房间清单」中操作';
+}
+function updateFilterOptions(){
+  const sel=$('#fDept');
+  const cur=state.filters.dept;
+  const depts=[...new Set(state.hazards.map(h=>h.dept))].sort((a,b)=>a.localeCompare(b,'zh'));
+  sel.innerHTML='<option value="all">全部</option>'+depts.map(d=>'<option'+(d===cur?' selected':'')+'>'+esc(d)+'</option>').join('');
+  if(cur!=='all'&&!depts.includes(cur))state.filters.dept='all';
+}
+$('#btnLayout').onclick=()=>$('#fileLayout').click();
+$('#btnNotify').onclick=openNotifyModal;
+$('#btnPhotos').onclick=()=>$('#filePhotos').click();
+$('#filePhotos').addEventListener('change',e=>{
+  const files=[...e.target.files];e.target.value='';
+  if(!files.length)return;
+  let done=0,failed=0;
+  files.forEach(f=>{
+    readImageFile(f,url=>{
+      if(url)state.attachments[f.name.split(/[\\/]/).pop().toLowerCase()]=url;
+      else failed++;
+      done++;
+      if(done===files.length){
+        state.hazards.forEach(h=>{h.photos=resolvePhoto(h.photoRaw);h.rectPhotos=resolvePhoto(h.rectRaw);});
+        saveState();renderTable();renderSide();
+        const n=files.length-failed;
+        toast('已上传 '+n+' 张照片附件'+(failed?'，'+failed+' 张读取失败':'')+'；Excel「隐患照片 / 整改照片」列填对应文件名即可自动关联',failed?'err':'ok');
+      }
+    });
+  });
+});
+$('#fileHazardPhoto').addEventListener('change',e=>{
+  const files=[...e.target.files];e.target.value='';
+  const h=pendingPhotoHazard;pendingPhotoHazard=null;
+  if(!h||!files.length)return;
+  let arr=[],done=0;
+  files.forEach(f=>readImageFile(f,url=>{
+    if(url)arr.push({src:url,label:f.name});
+    done++;
+    if(done===files.length){
+      if(arr.length)h.photos=arr;
+      saveState();renderSide();
+      if(roomModalId)buildRoomModal();
+      toast(arr.length?'已为该隐患添加 '+arr.length+' 张照片':'照片读取失败，请重试',arr.length?'ok':'err');
+    }
+  }));
+});
+$('#fileHazardRect').addEventListener('change',e=>{
+  const files=[...e.target.files];e.target.value='';
+  const h=pendingRectHazard;pendingRectHazard=null;
+  if(!h||!files.length)return;
+  let arr=[],done=0;
+  files.forEach(f=>readImageFile(f,url=>{
+    if(url)arr.push({src:url,label:f.name});
+    done++;
+    if(done===files.length){
+      if(arr.length)h.rectPhotos=arr;
+      saveState();renderSide();
+      if(roomModalId)buildRoomModal();
+      toast(arr.length?'已添加 '+arr.length+' 张整改照片':'照片读取失败，请重试',arr.length?'ok':'err');
+    }
+  }));
+});
+$('#btnLayoutEmpty').onclick=()=>$('#fileLayout').click();
+$('#fileLayout').addEventListener('change',e=>{handleLayoutFile(e.target.files[0]);e.target.value='';});
+$('#btnImport').onclick=()=>$('#fileExcel').click();
+$('#btnAdd').onclick=openAddHazardModal;
+$('#fileExcel').addEventListener('change',e=>{handleExcelFile(e.target.files[0]);e.target.value='';});
+$('#btnSample').onclick=loadSample;
+$('#btnTemplate').onclick=downloadTemplate;
+$('#btnDraw').onclick=()=>{
+  state.drawMode=!state.drawMode;
+  $('#btnDraw').classList.toggle('toggle-on',state.drawMode);
+  updateStageHint();
+  toast(state.drawMode?'已进入划分房间模式：拖拽圈出房间':'已退出划分房间模式');
+};
+$('#btnHighlight').onclick=()=>{
+  state.highlightDup=!state.highlightDup;
+  $('#btnHighlight').classList.toggle('toggle-danger-on',state.highlightDup);
+  $('#btnHighlight').innerHTML=state.highlightDup
+    ?'<svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm1 15h-2v-2h2v2Zm0-4h-2V7h2v6Z"/></svg>重复标红'
+    :'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Z"/><path d="M12 7v6"/><path d="M12 17h.01"/></svg>标红已关';
+  renderLayout();renderSide();
+};
+$('#btnExport').onclick=exportHazards;
+$('#btnClear').onclick=openClearModal;
+$('#fFrom').addEventListener('change',e=>{state.filters.from=e.target.value?new Date(e.target.value+'T00:00:00'):null;renderAll();});
+$('#fTo').addEventListener('change',e=>{state.filters.to=e.target.value?new Date(e.target.value+'T00:00:00'):null;renderAll();});
+$('#fLevel').addEventListener('change',e=>{state.filters.level=e.target.value;renderAll();});
+$('#fCat').addEventListener('change',e=>{state.filters.cat=e.target.value;renderAll();});
+$('#fDept').addEventListener('change',e=>{state.filters.dept=e.target.value;renderAll();});
+$('#fWindow').addEventListener('change',e=>{
+  const v=Math.max(1,Math.min(365,+e.target.value||30));
+  state.dupWindow=v;e.target.value=v;saveState();renderAll();toast('重复判定窗口已设为 '+v+' 天','ok');
+});
+$('#btnReset').onclick=()=>{
+  state.filters={from:null,to:null,level:'all',cat:'all',dept:'all'};
+  state.search='';$('#searchDesc').value='';$('#fFrom').value='';$('#fTo').value='';$('#fLevel').value='all';$('#fCat').value='all';
+  renderAll();toast('已重置筛选条件');
+};
+$('#searchDesc').addEventListener('input',e=>{state.search=e.target.value;renderTable();});
+document.querySelectorAll('#tabs .tab').forEach(t=>{
+  t.onclick=()=>{state.tab=t.dataset.tab;renderTabs();renderSide();};
+});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeLightbox();
+    closeRoomModal();
+    if(state.drawMode){
+      state.drawMode=false;$('#btnDraw').classList.remove('toggle-on');updateStageHint();toast('已退出划分房间模式');
+    }
+  }
+});
+let resizeTimer=null;
+window.addEventListener('resize',()=>{
+  clearTimeout(resizeTimer);
+  resizeTimer=setTimeout(()=>{Object.values(chartInstances).forEach(c=>c.resize());},120);
+});
+
+/* ================= 初始化 ================= */
+function init(){
+  loadState();
+  $('#fWindow').value=state.dupWindow;
+  if(location.search.indexOf('demo=1')>=0&&!state.layoutImage){setTimeout(loadSample,200);}
+  if(state.layoutImage){
+    img.src=state.layoutImage;img.style.display='block';
+    svg.style.display='block';
+    const W=state.naturalW||1600,H=state.naturalH||1000;
+    svg.setAttribute('viewBox','0 0 '+W+' '+H);
+    $('#stageEmpty').style.display='none';
+    $('#layoutSub').textContent=W+' × '+H+' · '+state.rooms.length+' 个房间';
+    updateStageHint();
+  }
+  const libs=window.__LIBS__||{echarts:false,xlsx:false};
+  applyDeepLink();
+  const nb=$('#netNotice');
+  if(!libs.echarts||!libs.xlsx){
+    const parts=[];
+    parts.push(!libs.echarts?'图表：已启用内置离线图表':'图表：正常');
+    parts.push(!libs.xlsx?'Excel 导入：不可用（可导入 CSV 或下载 CSV 模板）':'Excel 导入：正常');
+    nb.style.display='flex';
+    nb.innerHTML='<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>'
+      +'<span>在线图表 / Excel 解析库加载失败（网络受限）—— '+parts.join('　·　')+'。联网刷新后自动恢复完整功能。</span>';
+  }
+  renderAll();
+  /* 每月 1 号自动推送重复隐患提醒（当天第一次打开触发一次） */
+  const n=state.notify||{};
+  const _now=new Date(),_today=_now.getFullYear()+'-'+String(_now.getMonth()+1).padStart(2,'0')+'-'+String(_now.getDate()).padStart(2,'0');
+  if(n.monthly&&n.sendkey&&_now.getDate()===1&&n.lastPush!==_today){
+    state.notify.lastPush=_today;saveState();
+    setTimeout(()=>{pushRepeatReport(true);toast('今日为每月 1 号，已自动推送重复隐患提醒至微信','ok');},900);
+  }
+}
+if(window.__LIBS__){init();}
+else{
+  window.addEventListener('doubao-libs-ready',init);
+  setTimeout(function(){
+    if(!window.__LIBS__){window.__LIBS__={echarts:false,xlsx:false};init();}
+  },9000);
+}
+
+</script>
+</body>
+</html>

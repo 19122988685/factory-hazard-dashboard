@@ -260,7 +260,38 @@ tbody tr{cursor:pointer;}
 .map-row .k b{color:var(--txt);}
 .map-row select{width:100%;}
 .note{font-size:12px;color:var(--faint);background:var(--bg2);border:1px solid var(--line);border-radius:8px;padding:8px 11px;margin-top:10px;line-height:1.7;}
-#toastRoot{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:200;display:flex;flex-direction:column;gap:8px;align-items:center;}
+#toastRoot{position:fixed;bottom:26px;left:50%;transform:translateX(-50%);z-index:400;display:flex;flex-direction:column;gap:8px;align-items:center;}
+/* ===== 二维码录入 / 扫码上报 / 打印 ===== */
+.qr-show{display:flex;justify-content:center;padding:14px;}
+.qr-paper{background:#fff;border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;box-shadow:0 6px 18px rgba(0,0,0,.4);}
+.qr-paper svg{display:block;}
+.qr-paper .qr-room{font-size:15px;font-weight:800;color:#0F172A;}
+.qr-paper .qr-tip{font-size:11px;color:#64748B;}
+.qr-hint{font-size:12px;color:var(--faint);line-height:1.7;}
+.qr-import textarea{width:100%;min-height:120px;background:var(--bg2);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:10px;font-size:12px;resize:vertical;outline:none;font-family:ui-monospace,Consolas,monospace;}
+/* 扫码上报页（全屏覆盖） */
+.qr-scan{position:fixed;inset:0;z-index:300;background:var(--bg);overflow-y:auto;}
+.qr-scan-inner{max-width:560px;margin:0 auto;padding:20px 16px 48px;}
+.qr-scan-hd{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.qr-scan-hd .qr-badge{background:var(--accent);color:#fff;font-size:12px;font-weight:700;padding:4px 10px;border-radius:20px;}
+.qr-scan-hd h2{font-size:20px;font-weight:900;margin:0;}
+.qr-scan .form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.qr-scan .form-item.full{grid-column:1/-1;}
+.qr-scan .form-item label{display:block;font-size:12px;color:var(--faint);margin-bottom:5px;}
+.qr-scan .form-item input,.qr-scan .form-item select,.qr-scan .form-item textarea{width:100%;background:var(--panel);border:1px solid var(--line);color:var(--txt);border-radius:8px;padding:9px 10px;font-size:14px;outline:none;}
+.qr-scan .form-item textarea{resize:vertical;}
+.qr-scan .thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;}
+.qr-scan .thumbs img{width:72px;height:72px;object-fit:cover;border-radius:8px;border:1px solid var(--line);}
+.qr-scan .scan-note{background:rgba(59,130,246,.08);border:1px solid rgba(59,130,246,.25);border-radius:10px;padding:10px 12px;font-size:12px;color:var(--faint);line-height:1.7;margin-top:14px;}
+.qr-scan .big-btn{width:100%;padding:14px;font-size:16px;font-weight:800;border:none;border-radius:12px;background:var(--accent);color:#fff;cursor:pointer;margin-top:18px;}
+/* 打印：只显示二维码贴纸 */
+#printSheet{display:none;}
+@media print{
+  body>*{display:none !important;}
+  #printSheet{display:block !important;}
+  #printSheet .ps-room{page-break-after:always;}
+  #printSheet .ps-room:last-child{page-break-after:auto;}
+}
 .toast{background:#1B2A47;border:1px solid var(--line);color:var(--txt);border-radius:10px;padding:9px 16px;font-size:13px;box-shadow:var(--shadow);animation:toastIn .22s ease;max-width:640px;}
 .toast.err{border-color:var(--danger);color:#FCA5A5;}
 .toast.ok{border-color:var(--ok);color:#99F6E4;}
@@ -312,6 +343,7 @@ footer{margin-top:18px;color:var(--faint);font-size:12px;display:flex;justify-co
       <button class="btn" id="btnDraw"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19h7"/><path d="M16.5 4.5 19 7l-8.5 8.5-4 1 1-4L16.5 4.5Z"/></svg>划分房间</button>
       <button class="btn primary" id="btnImport"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>导入隐患数据</button>
       <button class="btn" id="btnAdd" title="直接在页面录入一条隐患"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>新增隐患</button>
+      <button class="btn" id="btnQr" title="生成房间二维码贴纸：手机扫码上报隐患，电脑端粘贴回传导入"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><path d="M14 14h3v3h-3z"/><path d="M21 14v7"/><path d="M14 21h7"/></svg>二维码录入</button>
       <button class="btn" id="btnPhotos" title="Excel「隐患照片/整改照片」列填文件名，导入前先在这里上传对应图片"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="6" width="18" height="14" rx="2"/><circle cx="12" cy="13" r="3.5"/><path d="M8.5 6 10 3.5h4L15.5 6"/></svg>上传照片附件</button>
       <button class="btn" id="btnNotify" title="配置 Server酱（方糖）微信推送：每月1号自动提醒重复隐患"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>提醒设置</button>
       <button class="btn" id="btnSample"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>加载示例</button>
@@ -2020,6 +2052,7 @@ $('#btnLayoutEmpty').onclick=()=>$('#fileLayout').click();
 $('#fileLayout').addEventListener('change',e=>{handleLayoutFile(e.target.files[0]);e.target.value='';});
 $('#btnImport').onclick=()=>$('#fileExcel').click();
 $('#btnAdd').onclick=openAddHazardModal;
+$('#btnQr').onclick=openQrModal;
 $('#fileExcel').addEventListener('change',e=>{handleExcelFile(e.target.files[0]);e.target.value='';});
 $('#btnSample').onclick=loadSample;
 $('#btnTemplate').onclick=downloadTemplate;
@@ -2072,6 +2105,441 @@ window.addEventListener('resize',()=>{
   resizeTimer=setTimeout(()=>{Object.values(chartInstances).forEach(c=>c.resize());},120);
 });
 
+/* ================= 二维码：自研 ISO/IEC 18004 编码器（字节模式，版本1-10，纠错 L/M/Q） ================= */
+const QR={
+  _exp:new Array(256),_log:new Array(256),_gfInited:false,
+  ECC_BLOCKS:[[1,1,1,1,1,2,2,2,2,4],[1,1,1,2,2,4,4,4,5,5],[1,1,2,2,4,4,6,6,8,8],[1,1,2,2,4,4,5,6,8,8]],
+  ECC_LEN:[[7,10,15,20,26,18,20,24,30,18],[10,16,26,18,24,16,18,22,22,26],[13,22,18,26,18,24,18,22,20,24],[17,28,22,16,22,28,26,26,24,28]],
+  RAW:[26,44,70,100,134,172,196,242,292,346],
+  ALGN:[[],[6,18],[6,22],[6,26],[6,30],[6,34],[6,22,38],[6,24,42],[6,26,46],[6,28,50]],
+  gfInit(){
+    if(this._gfInited)return;
+    let x=1;
+    for(let i=0;i<256;i++){this._exp[i]=x;this._log[x]=i;x<<=1;if(x&0x100)x^=0x11d;}
+    this._gfInited=true;
+  },
+  mul(a,b){return a&&b?this._exp[(this._log[a]+this._log[b])%255]:0;},
+  rsEcc(data,ecLen){
+    this.gfInit();
+    let gen=[1];
+    for(let i=0;i<ecLen;i++){
+      const next=new Array(gen.length+1).fill(0);
+      for(let j=0;j<gen.length;j++){
+        next[j]^=gen[j];
+        next[j+1]^=this.mul(gen[j],this._exp[i]);
+      }
+      gen=next;
+    }
+    const res=new Array(ecLen).fill(0);
+    for(let k=0;k<data.length;k++){
+      const coef=data[k]^(res.shift()||0);
+      res.push(0);
+      if(coef!==0){
+        const logc=this._log[coef];
+        for(let j=0;j<ecLen;j++){
+          if(gen[j+1]!==0)res[j]^=this._exp[(logc+this._log[gen[j+1]])%255];
+        }
+      }
+    }
+    return res;
+  },
+  formatBits(eclIdx,mask){
+    const data=(eclIdx<<3)|mask;
+    let rem=data;
+    for(let i=0;i<10;i++)rem=(rem<<1)^((rem>>>9)*0x537);
+    return ((data<<10)|rem)^0x5412;
+  },
+  versionBits(v){
+    let rem=v;
+    for(let i=0;i<12;i++)rem=(rem<<1)^((rem>>>11)*0x1F25);
+    return (v<<12)|rem;
+  },
+  maskBit(mask,x,y){
+    switch(mask){
+      case 0:return (x+y)%2===0;
+      case 1:return y%2===0;
+      case 2:return x%3===0;
+      case 3:return (x+y)%3===0;
+      case 4:return (Math.floor(x/3)+Math.floor(y/2))%2===0;
+      case 5:return (x*y)%2+(x*y)%3===0;
+      case 6:return ((x*y)%2+(x*y)%3)%2===0;
+      case 7:return ((x+y)%2+(x*y)%3)%2===0;
+    }
+    return false;
+  },
+  penalty(mods,size){
+    let result=0;
+    for(let y=0;y<size;y++){
+      let c=mods[y][0],len=1;
+      for(let x=1;x<size;x++){
+        if(mods[y][x]===c){len++;if(x===size-1&&len>=5)result+=3+len-5;}
+        else{if(len>=5)result+=3+len-5;c=mods[y][x];len=1;}
+      }
+    }
+    for(let x=0;x<size;x++){
+      let c=mods[0][x],len=1;
+      for(let y=1;y<size;y++){
+        if(mods[y][x]===c){len++;if(y===size-1&&len>=5)result+=3+len-5;}
+        else{if(len>=5)result+=3+len-5;c=mods[y][x];len=1;}
+      }
+    }
+    for(let y=0;y<size-1;y++){
+      for(let x=0;x<size-1;x++){
+        const c=mods[y][x];
+        if(c===mods[y][x+1]&&c===mods[y+1][x]&&c===mods[y+1][x+1])result+=3;
+      }
+    }
+    for(let y=0;y<size;y++){
+      for(let x=0;x<size-6;x++){
+        if(mods[y][x]&&!mods[y][x+1]&&mods[y][x+2]&&mods[y][x+3]&&mods[y][x+4]&&!mods[y][x+5]&&mods[y][x+6]
+          &&((x-4<0||(!mods[y][x-4]&&!mods[y][x-3]&&!mods[y][x-2]&&!mods[y][x-1]))
+            ||(x+10>=size||(mods[y][x+7]&&mods[y][x+8]&&mods[y][x+9]&&mods[y][x+10]))))result+=40;
+      }
+    }
+    for(let x=0;x<size;x++){
+      for(let y=0;y<size-6;y++){
+        if(mods[y][x]&&!mods[y+1][x]&&mods[y+2][x]&&mods[y+3][x]&&mods[y+4][x]&&!mods[y+5][x]&&mods[y+6][x]
+          &&((y-4<0||(!mods[y-4][x]&&!mods[y-3][x]&&!mods[y-2][x]&&!mods[y-1][x]))
+            ||(y+10>=size||(mods[y+7][x]&&mods[y+8][x]&&mods[y+9][x]&&mods[y+10][x]))))result+=40;
+      }
+    }
+    let dark=0;
+    for(let y=0;y<size;y++)for(let x=0;x<size;x++)if(mods[y][x])dark++;
+    result+=Math.floor(Math.abs(dark*100/(size*size)-50)/5)*10;
+    return result;
+  },
+  build(version,eclIdx,mask,codewords){
+    const size=17+4*version;
+    const mods=[];
+    for(let y=0;y<size;y++){const row=new Array(size);for(let x=0;x<size;x++)row[x]=undefined;mods.push(row);}
+    const set=(x,y,v)=>{mods[y][x]=v;};
+    const finder=(cx,cy)=>{
+      for(let dy=-4;dy<=4;dy++){
+        for(let dx=-4;dx<=4;dx++){
+          const x=cx+dx,y=cy+dy;
+          if(x<0||x>=size||y<0||y>=size)continue;
+          const d=Math.max(Math.abs(dx),Math.abs(dy));
+          set(x,y,d<=1||d===3);
+        }
+      }
+    };
+    finder(3,3);finder(size-4,3);finder(3,size-4);
+    for(let i=8;i<size-8;i++){
+      set(i,6,i%2===0);set(6,i,i%2===0);
+    }
+    const al=this.ALGN[version-1]||[];
+    for(let i=0;i<al.length;i++){
+      for(let j=0;j<al.length;j++){
+        const cx=al[i],cy=al[j];
+        if((cx===6&&cy===6)||(cx===6&&cy===size-7)||(cx===size-7&&cy===6))continue;
+        for(let dy=-2;dy<=2;dy++){
+          for(let dx=-2;dx<=2;dx++){
+            set(cx+dx,cy+dy,Math.max(Math.abs(dx),Math.abs(dy))!==1);
+          }
+        }
+      }
+    }
+    if(version>=7){
+      const vb=this.versionBits(version);
+      for(let i=0;i<18;i++){
+        const bit=((vb>>>i)&1)===1;
+        const a=size-11+(i%3),b=Math.floor(i/3);
+        set(a,b,bit);set(b,a,bit);
+      }
+    }
+    {
+      const fb=this.formatBits(eclIdx,mask);
+      const getBit=(v,i)=>((v>>>i)&1)===1;
+      for(let i=0;i<=5;i++)set(8,i,getBit(fb,i));
+      set(8,7,getBit(fb,6));
+      set(8,8,getBit(fb,7));
+      set(7,8,getBit(fb,8));
+      for(let i=9;i<15;i++)set(14-i,8,getBit(fb,i));
+      for(let i=0;i<8;i++)set(size-1-i,8,getBit(fb,i));
+      for(let i=8;i<15;i++)set(8,size-15+i,getBit(fb,i));
+      set(8,size-8,true);
+    }
+    let bitIndex=0;
+    const bitAt=()=>{
+      const byte=codewords[bitIndex>>>3];
+      return byte!==undefined&&((byte>>>(7-(bitIndex&7)))&1)===1;
+    };
+    let x=size-1,up=true;
+    while(x>0){
+      if(x===6)x--;
+      for(let i=0;i<size;i++){
+        const y=up?size-1-i:i;
+        for(let j=0;j<2;j++){
+          const px=x-j;
+          if(mods[y][px]===undefined){
+            let v=bitAt();
+            if(bitIndex>>>3<codewords.length){
+              if(this.maskBit(mask,px,y))v=!v;
+              set(px,y,v);bitIndex++;
+            }else set(px,y,false);
+          }
+        }
+      }
+      x-=2;up=!up;
+    }
+    return {mods,size,version,ecl:eclIdx,mask};
+  },
+  make(text,eclName){
+    eclName=eclName||'M';
+    const eclIdx={L:1,M:0,Q:3}[eclName];
+    if(eclIdx===undefined)return null;
+    const bytes=[];
+    for(let i=0;i<text.length;i++){
+      const c=text.charCodeAt(i);
+      if(c<128)bytes.push(c);
+      else if(c<0x800)bytes.push(0xC0|(c>>6),0x80|(c&63));
+      else bytes.push(0xE0|(c>>12),0x80|((c>>6)&63),0x80|(c&63));
+    }
+    if(!bytes.length)return null;
+    let version=null;
+    for(let v=1;v<=10;v++){
+      const countBits=v<=9?8:16;
+      const codewords=Math.ceil((4+countBits+bytes.length*8+4)/8);
+      const capacity=this.RAW[v-1]-this.ECC_BLOCKS[eclIdx][v-1]*this.ECC_LEN[eclIdx][v-1];
+      if(codewords<=capacity){version=v;break;}
+    }
+    if(!version)return null;
+    const countBits=version<=9?8:16;
+    let bitStr='0100'+bytes.length.toString(2).padStart(countBits,'0');
+    for(const b of bytes)bitStr+=b.toString(2).padStart(8,'0');
+    bitStr+='0000';
+    while(bitStr.length%8)bitStr+='0';
+    const totalData=this.RAW[version-1]-this.ECC_BLOCKS[eclIdx][version-1]*this.ECC_LEN[eclIdx][version-1];
+    const data=[];
+    for(let i=0;i<bitStr.length;i+=8)data.push(parseInt(bitStr.slice(i,i+8),2));
+    const pad=[0xEC,0x11];
+    let pi=0;
+    while(data.length<totalData)data.push(pad[pi++&1]);
+    const numBlocks=this.ECC_BLOCKS[eclIdx][version-1];
+    const eccLen=this.ECC_LEN[eclIdx][version-1];
+    const rawDataTotal=this.RAW[version-1]-numBlocks*eccLen;
+    const dataPer=Math.floor(rawDataTotal/numBlocks);
+    const extra=rawDataTotal%numBlocks;
+    const blocks=[];
+    let pos=0;
+    for(let b=0;b<numBlocks;b++){
+      const len=dataPer+(b<extra?1:0);
+      const d=data.slice(pos,pos+len);
+      blocks.push({data:d,ecc:this.rsEcc(d,eccLen)});
+      pos+=len;
+    }
+    const final=[];
+    for(let i=0;i<dataPer;i++)for(const bl of blocks)final.push(bl.data[i]);
+    for(let i=dataPer;i<dataPer+1;i++)for(const bl of blocks)if(bl.data.length>i)final.push(bl.data[i]);
+    for(let i=0;i<eccLen;i++)for(const bl of blocks)final.push(bl.ecc[i]);
+    let best=null,bestScore=Infinity;
+    for(let m=0;m<8;m++){
+      const qr=this.build(version,eclIdx,m,final);
+      const s=this.penalty(qr.mods,qr.size);
+      if(s<bestScore){bestScore=s;best=qr;}
+    }
+    return best;
+  }
+};
+function qrSvg(qr,px){
+  px=px||4;
+  const n=qr.size,pad=px;
+  const cells=[];
+  for(let y=0;y<n;y++){
+    let x=0;
+    while(x<n){
+      if(qr.mods[y][x]){
+        let x2=x+1;
+        while(x2<n&&qr.mods[y][x2])x2++;
+        cells.push('<rect x="'+(x*px+pad)+'" y="'+(y*px+pad)+'" width="'+((x2-x)*px)+'" height="'+px+'"/>');
+        x=x2;
+      }else x++;
+    }
+  }
+  return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 '+(n*px+2*pad)+' '+(n*px+2*pad)+'" width="'+(n*px+2*pad)+'" height="'+(n*px+2*pad)+'" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#fff"/>'+cells.join('')+'</svg>';
+}
+/* ---- 二维码录入 / 扫码上报 / 回传导入 ---- */
+let qrBase='';
+function qrBaseUrl(){
+  if(qrBase)return qrBase;
+  try{qrBase=localStorage.getItem('shd-qr-base')||location.href.split('?')[0];}catch(e){qrBase=location.href.split('?')[0];}
+  return qrBase;
+}
+function qrRoomUrl(room){return qrBaseUrl()+'?scan=1&room='+encodeURIComponent(room);}
+function openQrModal(){
+  closeRoomModal();closeLightbox();
+  let mask=document.getElementById('qrMask');
+  if(mask){mask.style.display='flex';return;}
+  mask=el('div','modal-mask');
+  mask.id='qrMask';
+  const rooms=state.rooms.map(r=>r.name);
+  mask.innerHTML='<div class="modal" style="width:min(660px,100%)">'
+    +'<div class="modal-hd"><h3>二维码录入</h3><span style="font-size:12px;color:var(--faint)">生成房间二维码贴纸 → 手机扫码上报 → 电脑端粘贴回传导入</span></div>'
+    +'<div class="modal-bd">'
+    +'<div class="form-item"><label>选择房间</label><select id="qrRoom">'
+    +(rooms.length?rooms.map((r,i)=>'<option value="'+esc(r)+'"'+(i===0?' selected':'')+'>'+esc(r)+'</option>').join(''):'<option value="">— 尚未划分房间，请先在布局图划分 —</option>')
+    +'</select></div>'
+    +'<div class="form-item" style="margin-top:10px"><label>页面地址（手机可访问的网址，自动记忆；部署后请填写线上地址）</label><input id="qrBase" value="'+esc(qrBaseUrl())+'"></div>'
+    +'<div class="qr-show"><div class="qr-paper" id="qrPaper"></div></div>'
+    +'<div class="form-item" style="margin-top:6px"><label>粘贴手机上报的数据（JSON），一键导入电脑台账</label><textarea id="qrImportTxt" placeholder="手机上报页提交后，点击「复制上报数据」，回到这里粘贴…"></textarea></div>'
+    +'<div class="note qr-hint">① 打印二维码贴纸贴到房间门口；② 手机微信/相机扫码 → 打开上报页填写隐患与照片 → 提交后点「复制上报数据」；③ 回到本页粘贴到上方输入框 → 点「导入上报数据」。</div>'
+    +'</div>'
+    +'<div class="modal-ft"><span class="spacer"></span><button class="btn" id="qrPrintAll">打印全部房间贴纸</button><button class="btn" id="qrImport">导入上报数据</button><button class="btn primary" id="qrClose">完成</button></div></div>';
+  $('#modalRoot').appendChild(mask);
+  const roomSel=mask.querySelector('#qrRoom');
+  const baseInp=mask.querySelector('#qrBase');
+  const render=()=>{
+    const room=roomSel.value;
+    const base=baseInp.value.trim();
+    if(base){qrBase=base;try{localStorage.setItem('shd-qr-base',base);}catch(e){}}
+    const paper=mask.querySelector('#qrPaper');
+    if(!room){paper.innerHTML='<div style="color:#0F172A;font-size:13px;padding:20px">请先在布局图上划分房间</div>';return;}
+    const qr=QR.make(qrRoomUrl(room),'M');
+    if(!qr){paper.innerHTML='<div style="color:#B91C1C;font-size:13px;padding:20px">内容过长，无法生成二维码</div>';return;}
+    paper.innerHTML=qrSvg(qr,4)+'<div class="qr-room">'+esc(room)+'</div><div class="qr-tip">扫码上报隐患</div>';
+  };
+  roomSel.addEventListener('change',render);
+  baseInp.addEventListener('input',render);
+  render();
+  mask.querySelector('#qrClose').onclick=()=>mask.remove();
+  mask.querySelector('#qrImport').onclick=()=>{
+    const txt=mask.querySelector('#qrImportTxt').value.trim();
+    if(!txt){toast('请先粘贴手机上报的数据','err');return;}
+    const n=importScanData(txt);
+    mask.querySelector('#qrImportTxt').value='';
+    toast(n?'成功导入 '+n+' 条隐患':'导入失败，请检查数据格式',n?'ok':'err');
+  };
+  mask.querySelector('#qrPrintAll').onclick=()=>{
+    if(!state.rooms.length){toast('尚未划分房间','err');return;}
+    printRoomQrSheet();
+  };
+}
+function printRoomQrSheet(){
+  const base=qrBaseUrl();
+  const cards=state.rooms.map(r=>{
+    const qr=QR.make(qrRoomUrl(r.name),'M');
+    return '<div class="ps-room"><div class="qr-paper" style="box-shadow:none;border:1px dashed #94A3B8">'
+      +(qr?qrSvg(qr,4):'<div style="color:#B91C1C">内容过长</div>')
+      +'<div class="qr-room">'+esc(r.name)+'</div><div class="qr-tip">扫码上报隐患</div></div></div>';
+  }).join('');
+  let sheet=document.getElementById('printSheet');
+  if(!sheet){sheet=document.createElement('div');sheet.id='printSheet';document.body.appendChild(sheet);}
+  sheet.innerHTML='<style>body{background:#fff;margin:0}.qr-paper{background:#fff;border-radius:10px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;margin:12px auto;width:fit-content;}.qr-paper svg{display:block}.qr-room{font-size:16px;font-weight:800;color:#0F172A}.qr-tip{font-size:11px;color:#64748B}.ps-room{display:flex;justify-content:center;}</style>'+cards;
+  window.print();
+}
+function importScanData(txt){
+  let list;
+  try{list=JSON.parse(txt);if(!Array.isArray(list))list=[list];}
+  catch(e){return 0;}
+  let added=0;
+  for(const r of list){
+    if(!r||!r.desc)continue;
+    const roomRaw=String(r.room||'').trim();
+    const time=parseDate(r.time)||new Date();
+    const matchedRoom=matchRoom(roomRaw);
+    state.hazards.push({_id:uid(),
+      dept:String(r.dept||'未填写').trim(),
+      level:normLevel(r.level),
+      category:normCategory(r.category),
+      time,
+      room:roomRaw||'未指定',
+      desc:String(r.desc).trim(),
+      person:String(r.person||'').trim()||'未填写',
+      rectPerson:String(r.rectPerson||'').trim()||'',
+      photoRaw:'',photos:Array.isArray(r.photos)?r.photos.map(p=>({src:p.src||p,label:p.label||'扫码上报'})):[],
+      closed:normClosed(r.closed),
+      rectNote:'',rectRaw:'',rectPhotos:Array.isArray(r.rectPhotos)?r.rectPhotos.map(p=>({src:p.src||p,label:p.label||'扫码整改'})):[],
+      roomKey:matchedRoom||roomRaw||'未指定',roomMatched:!!matchedRoom});
+    added++;
+  }
+  if(added){saveState();renderAll();}
+  return added;
+}
+/* ---- 扫码上报页（?scan=1&room=xxx 深链） ---- */
+let scanPhotos=[],scanRectPhotos=[];
+function initScanMode(){
+  if(location.search.indexOf('scan=1')<0)return;
+  const rm=location.search.match(/[?&]room=([^&]+)/);
+  const room=rm?decodeURIComponent(rm[1]):'';
+  const today=fmtDate(new Date());
+  const depts=['生产部','设备部','安环部','仓储部','行政部','品质部','其他'];
+  const wrap=el('div','qr-scan');
+  wrap.innerHTML='<div class="qr-scan-inner">'
+    +'<div class="qr-scan-hd"><span class="qr-badge">扫码上报</span><h2>'+esc(room||'未指定房间')+'</h2></div>'
+    +'<div class="form-grid">'
+    +'<div class="form-item"><label>发现时间 *</label><input type="date" id="sqTime" value="'+today+'"></div>'
+    +'<div class="form-item"><label>房间位置</label><input id="sqRoom" value="'+esc(room)+'" readonly></div>'
+    +'<div class="form-item"><label>隐患等级 *</label><select id="sqLevel"><option>一类隐患</option><option>二类隐患</option><option>三类隐患</option></select></div>'
+    +'<div class="form-item"><label>隐患类别 *</label><select id="sqCat"><option>电气安全</option><option>设备安全</option><option>化学品安全</option><option>消防安全</option><option>劳保用品安全</option><option>文件管理</option><option>其他安全</option></select></div>'
+    +'<div class="form-item"><label>整改责任部门</label><input id="sqDept" list="sqDeptList" placeholder="如：生产部"><datalist id="sqDeptList">'+depts.map(d=>'<option value="'+d+'">').join('')+'</datalist></div>'
+    +'<div class="form-item"><label>检查人（发现人）</label><input id="sqPerson" placeholder="如：王强"></div>'
+    +'<div class="form-item"><label>整改人</label><input id="sqRectPerson" placeholder="如：陈刚"></div>'
+    +'<div class="form-item"><label>闭环情况</label><select id="sqClosed"><option value="">未闭环</option><option>整改中</option><option>已闭环</option></select></div>'
+    +'<div class="form-item full"><label>隐患描述 *</label><textarea id="sqDesc" rows="2" placeholder="描述隐患内容…"></textarea></div>'
+    +'<div class="form-item full"><label>隐患照片（可多选，选填）</label><input type="file" id="sqPhoto" accept="image/*" multiple><div class="thumbs" id="sqPhotoThumbs"></div></div>'
+    +'<div class="form-item full"><label>整改照片（可多选，选填）</label><input type="file" id="sqRect" accept="image/*" multiple><div class="thumbs" id="sqRectThumbs"></div></div>'
+    +'</div>'
+    +'<button class="big-btn" id="sqSubmit">提交上报</button>'
+    +'<div class="scan-note">提交后数据保存在本手机浏览器。回到电脑页面：点「二维码录入」→ 粘贴「复制上报数据」内容 → 「导入上报数据」，即可同步到隐患台账参与统计与重复判定。</div>'
+    +'</div>';
+  document.body.appendChild(wrap);
+  const bind=(inpId,thumbsId,cb)=>{
+    wrap.querySelector('#'+inpId).addEventListener('change',e=>{
+      const files=[...e.target.files];
+      const arr=[];let done=0;
+      files.forEach(f=>readImageFile(f,url=>{
+        if(url)arr.push({src:url,label:f.name});
+        done++;
+        if(done===files.length){
+          cb(arr);
+          const box=wrap.querySelector('#'+thumbsId);
+          if(box)box.innerHTML=arr.map(p=>'<img src="'+p.src+'" title="'+esc(p.label)+'">').join('');
+        }
+      },640));
+    });
+  };
+  bind('sqPhoto','sqPhotoThumbs',a=>{scanPhotos=a;});
+  bind('sqRect','sqRectThumbs',a=>{scanRectPhotos=a;});
+  wrap.querySelector('#sqSubmit').onclick=()=>{
+    const time=wrap.querySelector('#sqTime').value;
+    const desc=wrap.querySelector('#sqDesc').value.trim();
+    if(!time){toast('请选择发现时间','err');return;}
+    if(!desc){toast('请填写隐患描述','err');return;}
+    const rec={room:room||wrap.querySelector('#sqRoom').value.trim()||'未指定',
+      level:wrap.querySelector('#sqLevel').value,
+      category:wrap.querySelector('#sqCat').value,
+      dept:wrap.querySelector('#sqDept').value.trim()||'未填写',
+      person:wrap.querySelector('#sqPerson').value.trim()||'',
+      rectPerson:wrap.querySelector('#sqRectPerson').value.trim()||'',
+      closed:wrap.querySelector('#sqClosed').value,
+      time:time,desc:desc,
+      photos:scanPhotos.slice(),rectPhotos:scanRectPhotos.slice(),ts:Date.now()};
+    let list=[];try{list=JSON.parse(localStorage.getItem('shd-scanq-v1')||'[]');}catch(e){list=[];}
+    list.push(rec);
+    try{localStorage.setItem('shd-scanq-v1',JSON.stringify(list));}
+    catch(e){toast('本地存储空间不足，请压缩照片后重试','err');return;}
+    const copyTxt=JSON.stringify([rec]);
+    const box=document.createElement('div');
+    box.style.cssText='margin-top:16px;background:rgba(16,185,129,.08);border:1px solid rgba(16,185,129,.3);border-radius:10px;padding:12px;';
+    box.innerHTML='<div style="font-weight:800;color:#34D399;margin-bottom:8px">已保存 '+list.length+' 条上报记录</div>'
+      +'<div style="font-size:12px;color:var(--faint);margin-bottom:8px">点击下方按钮复制，回到电脑页面「二维码录入」粘贴导入：</div>'
+      +'<textarea id="sqCopy" rows="4" style="width:100%;background:#0B1220;border:1px solid var(--line);color:#A7F3D0;border-radius:8px;padding:10px;font-size:11px;font-family:ui-monospace,Consolas,monospace;">'+copyTxt+'</textarea>'
+      +'<button class="big-btn" id="sqCopyBtn" style="background:#059669">复制上报数据</button>';
+    wrap.querySelector('.qr-scan-inner').appendChild(box);
+    box.querySelector('#sqCopyBtn').onclick=()=>{
+      const ta=box.querySelector('#sqCopy');
+      ta.select();ta.setSelectionRange(0,999999);
+      let ok=false;
+      try{ok=document.execCommand('copy');}catch(e){}
+      if(!ok&&navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(ta.value).then(()=>toast('已复制上报数据'),()=>toast('复制失败，请长按文本手动复制','err'));return;}
+      toast(ok?'已复制上报数据':'请长按文本手动复制');
+    };
+    const btn=wrap.querySelector('#sqSubmit');
+    if(btn)btn.style.display='none';
+    toast('上报成功，已保存到本机');
+  };
+}
+
 /* ================= 初始化 ================= */
 function init(){
   loadState();
@@ -2088,6 +2556,7 @@ function init(){
   }
   const libs=window.__LIBS__||{echarts:false,xlsx:false};
   applyDeepLink();
+  initScanMode();
   const nb=$('#netNotice');
   if(!libs.echarts||!libs.xlsx){
     const parts=[];

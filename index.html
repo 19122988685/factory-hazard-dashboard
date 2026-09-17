@@ -349,6 +349,9 @@ footer{margin-top:18px;color:var(--faint);font-size:12px;display:flex;justify-co
       <button class="btn" id="btnSample"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z"/></svg>加载示例</button>
       <button class="btn" id="btnTemplate"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8Z"/><path d="M14 2v6h6"/><path d="M8 17h8"/><path d="M8 13h5"/></svg>下载模板</button>
       <button class="btn" id="btnExport" title="按当前筛选/搜索范围导出隐患数据为 Excel 或 CSV"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></svg>导出数据</button>
+      <button class="btn" id="btnBackup" title="把布局图、房间划分、全部隐患（含照片）、设置备份为一个文件，可在其他电脑恢复"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/><path d="M12 3v4a1 1 0 0 1-1 1h-2"/></svg>备份数据</button>
+      <button class="btn" id="btnRestore" title="从备份文件恢复全部数据（会覆盖当前页面数据）"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 8 5-5 5 5"/><path d="M12 3v12"/></svg>恢复备份</button>
+      <input type="file" id="backupFile" accept=".json,application/json" style="display:none">
       <button class="btn" id="btnClear" style="color:#FCA5A5;"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>清空（分项）</button>
     </div>
     <div class="tdivider"></div>
@@ -1897,6 +1900,46 @@ function exportHazards(){
   setTimeout(()=>URL.revokeObjectURL(a.href),5000);
   toast('已导出 '+rows.length+' 条为 CSV（当前无网络，Excel 库不可用）','ok');
 }
+/* ===== 完整备份 / 恢复（跨电脑迁移） ===== */
+function exportBackup(){
+  try{
+    const s={app:'shd-backup',ver:1,ts:new Date().toISOString(),
+      layoutImage:state.layoutImage,naturalW:state.naturalW,naturalH:state.naturalH,
+      rooms:state.rooms,hazards:state.hazards,roomSeq:state.roomSeq,dupWindow:state.dupWindow,
+      attachments:state.attachments,notify:state.notify};
+    const blob=new Blob([JSON.stringify(s)],{type:'application/json'});
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(blob);
+    a.download='隐患数据备份_'+new Date().toISOString().slice(0,10)+'.json';
+    document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),4000);
+    toast('已生成完整备份（含布局图/房间/隐患/照片/设置），请妥善保存','ok');
+  }catch(e){toast('备份失败：'+e.message,'err');}
+}
+function importBackup(file){
+  const fr=new FileReader();
+  fr.onload=()=>{
+    try{
+      const s=JSON.parse(fr.result);
+      if(!s||s.app!=='shd-backup'||!s.hazards)throw new Error('不是本系统的备份文件');
+      if(s.layoutImage!==undefined)state.layoutImage=s.layoutImage;
+      if(s.naturalW)state.naturalW=s.naturalW;
+      if(s.naturalH)state.naturalH=s.naturalH;
+      state.rooms=Array.isArray(s.rooms)?s.rooms:[];
+      state.hazards=Array.isArray(s.hazards)?s.hazards:[];
+      state.roomSeq=s.roomSeq||state.rooms.length+1;
+      state.dupWindow=s.dupWindow||30;
+      state.attachments=s.attachments||{};
+      state.notify=s.notify?Object.assign({sendkey:'',monthly:true,lastPush:''},s.notify):{sendkey:'',monthly:true,lastPush:''};
+      state.hazards.forEach(h=>{if(!h._id)h._id=uid();if(h.closed==null)h.closed='';if(!h.rectPhotos)h.rectPhotos=[];if(!h.rectNote)h.rectNote='';});
+      if(state.layoutImage){const im=new Image();im.onload=()=>{state.naturalW=im.naturalWidth;state.naturalH=im.naturalHeight;saveState();renderAll();};im.src=state.layoutImage;}
+      saveState();renderAll();
+      toast('恢复完成：'+state.rooms.length+' 个房间，'+state.hazards.length+' 条隐患','ok');
+    }catch(e){toast('恢复失败：'+e.message,'err');}
+  };
+  fr.onerror=()=>toast('文件读取失败','err');
+  fr.readAsText(file);
+}
 
 /* ================= 新增隐患（页面直接录入） ================= */
 let addPhotosArr=[],addRectArr=[];
@@ -2071,6 +2114,9 @@ $('#btnHighlight').onclick=()=>{
   renderLayout();renderSide();
 };
 $('#btnExport').onclick=exportHazards;
+$('#btnBackup').onclick=exportBackup;
+$('#btnRestore').onclick=()=>$('#backupFile').click();
+$('#backupFile').onchange=e=>{if(e.target.files[0]){importBackup(e.target.files[0]);e.target.value='';}};
 $('#btnClear').onclick=openClearModal;
 $('#fFrom').addEventListener('change',e=>{state.filters.from=e.target.value?new Date(e.target.value+'T00:00:00'):null;renderAll();});
 $('#fTo').addEventListener('change',e=>{state.filters.to=e.target.value?new Date(e.target.value+'T00:00:00'):null;renderAll();});

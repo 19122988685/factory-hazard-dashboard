@@ -616,12 +616,12 @@ function readImageFile(file,cb,max){
   reader.onload=e=>{
     const im=new Image();
     im.onload=()=>{
-      const M=max||1280;
+      const M=max||900;
       let w=im.naturalWidth,h=im.naturalHeight;
       if(w>M||h>M){const s=Math.min(M/w,M/h);w=Math.round(w*s);h=Math.round(h*s);}
       const cv=document.createElement('canvas');cv.width=w;cv.height=h;
       cv.getContext('2d').drawImage(im,0,0,w,h);
-      cb(cv.toDataURL('image/jpeg',0.82));
+      cb(cv.toDataURL('image/jpeg',0.72));
     };
     im.onerror=()=>cb(null);
     im.src=e.target.result;
@@ -642,14 +642,68 @@ function samplePhoto(text,color){
 }
 
 /* ================= 持久化 ================= */
+/* 照片存储：大体积照片（dataURL>15KB）写入 IndexedDB（容量远超 localStorage），
+   localStorage 只存 'idb:key' 引用，从根本上解决「照片过多内存/存储不足」 */
+let _idb=null;
+function idbOpen(){
+  return new Promise((res,rej)=>{
+    if(_idb)return res(_idb);
+    if(!window.indexedDB)return rej(new Error('no-idb'));
+    const rq=indexedDB.open('shd-photos',1);
+    rq.onupgradeneeded=e=>{const db=e.target.result;if(!db.objectStoreNames.contains('photos'))db.createObjectStore('photos');};
+    rq.onsuccess=e=>{_idb=e.target.result;res(_idb);};
+    rq.onerror=()=>rej(rq.error);
+  });
+}
+async function idbPut(key,val){try{const db=await idbOpen();return new Promise((res,rej)=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').put(val,key);tx.oncomplete=res;tx.onerror=()=>rej(tx.error);});}catch(e){}}
+async function idbGet(key){try{const db=await idbOpen();return new Promise(res=>{const rq=db.transaction('photos').objectStore('photos').get(key);rq.onsuccess=()=>res(rq.result);rq.onerror=()=>res(undefined);});}catch(e){return undefined;}}
+async function idbDel(key){try{const db=await idbOpen();return new Promise(res=>{const tx=db.transaction('photos','readwrite');tx.objectStore('photos').delete(key);tx.oncomplete=res;tx.onerror=res;});}catch(e){}}
+/* 保存前把大照片抽到 IndexedDB，localStorage 只存引用（不修改内存 state） */
+function buildSavePayload(){
+  const s={layoutImage:state.layoutImage,naturalW:state.naturalW,naturalH:state.naturalH,
+    rooms:state.rooms,roomSeq:state.roomSeq,dupWindow:state.dupWindow,
+    attachments:state.attachments,notify:state.notify};
+  const photoKey=(h,arr,i)=>'ph-'+h._id+'-'+arr+'-'+i;
+  s.hazards=state.hazards.map(h=>{
+    const c={...h};
+    c.photos=(h.photos||[]).map((p,i)=>{
+      if(p&&p.src&&p.src.startsWith('data:')&&p.src.length>15000){idbPut(photoKey(h,'p',i),p.src);return {src:'idb:'+photoKey(h,'p',i),label:p.label};}
+      return p;
+    });
+    c.rectPhotos=(h.rectPhotos||[]).map((p,i)=>{
+      if(p&&p.src&&p.src.startsWith('data:')&&p.src.length>15000){idbPut(photoKey(h,'r',i),p.src);return {src:'idb:'+photoKey(h,'r',i),label:p.label};}
+      return p;
+    });
+    return c;
+  });
+  return s;
+}
 function saveState(){
   try{
-    const s={layoutImage:state.layoutImage,naturalW:state.naturalW,naturalH:state.naturalH,
-      rooms:state.rooms,hazards:state.hazards,roomSeq:state.roomSeq,dupWindow:state.dupWindow,
-      attachments:state.attachments,notify:state.notify};
+    const s=buildSavePayload();
     localStorage.setItem(LS_KEY,JSON.stringify(s));
     const h=$('#saveHint');h.textContent='已自动保存 '+new Date().toLocaleTimeString();
   }catch(e){toast('本地存储空间不足，照片等大体积数据未保存（本页仍可用，刷新后照片需重新上传）','err');}
+}
+/* 加载后：把 'idb:' 引用换回真实照片并重渲染 */
+async function hydratePhotos(){
+  try{
+    let changed=false;
+    for(const h of state.hazards){
+      for(const pair of [['p',h.photos],['r',h.rectPhotos]]){
+        const arr=pair[1];if(!arr)continue;
+        for(let i=0;i<arr.length;i++){
+          const p=arr[i];
+          if(p&&p.src&&p.src.startsWith('idb:')){
+            const url=await idbGet(p.src.slice(4));
+            if(url){arr[i]={src:url,label:p.label};changed=true;}
+            else{arr.splice(i,1);i--;changed=true;}
+          }
+        }
+      }
+    }
+    if(changed){renderAll();saveState();}
+  }catch(e){console.warn('hydratePhotos failed',e);}
 }
 function applyDeepLink(){
   const m=location.search.match(/[?&]room=([^&]+)/);
@@ -668,7 +722,23 @@ function loadState(){
     state.rooms=s.rooms||[];state.hazards=s.hazards||[];state.roomSeq=s.roomSeq||state.rooms.length+1;
     state.dupWindow=s.dupWindow||30;state.attachments=s.attachments||{};
     state.notify=s.notify?Object.assign({sendkey:'',monthly:true,lastPush:''},s.notify):{sendkey:'',monthly:true,lastPush:''};
-    state.hazards.forEach(h=>{if(!h._id)h._id=uid();if(h.closed==null)h.closed='';if(!h.rectPhotos)h.rectPhotos=[];if(!h.rectNote)h.rectNote='';});
+    /* 归一化：兼容旧版本数据（补 roomKey / 时间转 Date / 照片数组化），保证各视图一致匹配 */
+    state.hazards.forEach(h=>{
+      if(!h._id)h._id=uid();
+      if(h.closed==null)h.closed='';
+      if(!h.rectPhotos)h.rectPhotos=[];
+      if(!h.rectNote)h.rectNote='';
+      if(h.time&&!(h.time instanceof Date)){
+        const t=new Date(h.time);
+        h.time=isNaN(t.getTime())?new Date(0):t;
+      }else if(!h.time)h.time=new Date(0);
+      if(h.photos&&!Array.isArray(h.photos))h.photos=[];
+      if(!h.roomKey||!h.roomMatched){
+        const m=matchRoom(h.room);
+        h.roomKey=h.roomKey||(m||h.room||'未指定');
+        h.roomMatched=!!m;
+      }
+    });
   }catch(e){console.warn('loadState failed',e);}
 }
 
@@ -1605,6 +1675,12 @@ function deleteHazard(id){
   const idx=state.hazards.findIndex(h=>h._id===id);
   if(idx<0)return;
   if(!confirm('确定删除这条隐患记录？删除后不可恢复'))return;
+  const h=state.hazards[idx];
+  /* 清理 IndexedDB 中的照片 */
+  for(const pair of [['p',h.photos],['r',h.rectPhotos]]){
+    const arr=pair[1];if(!arr)continue;
+    arr.forEach((p,i)=>{if(p&&p.src&&p.src.startsWith('idb:'))idbDel(p.src.slice(4));});
+  }
   state.hazards.splice(idx,1);
   saveState();renderAll();
   if(roomModalId)buildRoomModal();
@@ -1931,7 +2007,12 @@ function importBackup(file){
       state.dupWindow=s.dupWindow||30;
       state.attachments=s.attachments||{};
       state.notify=s.notify?Object.assign({sendkey:'',monthly:true,lastPush:''},s.notify):{sendkey:'',monthly:true,lastPush:''};
-      state.hazards.forEach(h=>{if(!h._id)h._id=uid();if(h.closed==null)h.closed='';if(!h.rectPhotos)h.rectPhotos=[];if(!h.rectNote)h.rectNote='';});
+      state.hazards.forEach(h=>{
+        if(!h._id)h._id=uid();if(h.closed==null)h.closed='';if(!h.rectPhotos)h.rectPhotos=[];if(!h.rectNote)h.rectNote='';
+        if(h.time&&!(h.time instanceof Date)){const t=new Date(h.time);h.time=isNaN(t.getTime())?new Date(0):t;}else if(!h.time)h.time=new Date(0);
+        if(h.photos&&!Array.isArray(h.photos))h.photos=[];
+        if(!h.roomKey||!h.roomMatched){const m=matchRoom(h.room);h.roomKey=h.roomKey||(m||h.room||'未指定');h.roomMatched=!!m;}
+      });
       if(state.layoutImage){const im=new Image();im.onload=()=>{state.naturalW=im.naturalWidth;state.naturalH=im.naturalHeight;saveState();renderAll();};im.src=state.layoutImage;}
       saveState();renderAll();
       toast('恢复完成：'+state.rooms.length+' 个房间，'+state.hazards.length+' 条隐患','ok');
@@ -2589,6 +2670,7 @@ function initScanMode(){
 /* ================= 初始化 ================= */
 function init(){
   loadState();
+  hydratePhotos();
   $('#fWindow').value=state.dupWindow;
   if(location.search.indexOf('demo=1')>=0&&!state.layoutImage){setTimeout(loadSample,200);}
   if(state.layoutImage){
